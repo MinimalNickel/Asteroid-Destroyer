@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#05060f">
+<title>Asteroid Destroyer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="healthWrap">
+      <div id="healthBar"></div>
+      <div id="healthLabel">100</div>
+    </div>
+    <div id="scoreLabel">Score: 0</div>
+    <div id="waveLabel">Wave 1</div>
+  </div>
+
+  <div id="startScreen" class="overlay">
+    <h1>ASTEROID<br>DESTROYER</h1>
+    <p>Tap anywhere to aim &amp; fire your turret.<br>Don't let the asteroids reach your ship!</p>
+    <button id="startBtn">TAP TO START</button>
+  </div>
+
+  <div id="gameOverScreen" class="overlay hidden">
+    <h1>SHIP DESTROYED</h1>
+    <p id="finalScore">Score: 0</p>
+    <p id="bestScore">Best: 0</p>
+    <button id="retryBtn">TRY AGAIN</button>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

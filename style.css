@@ -1,0 +1,126 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05060f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  touch-action: none;
+}
+
+#game {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  background: #05060f;
+}
+
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: max(12px, env(safe-area-inset-top)) 16px 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+  color: #eaf0ff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+#healthWrap {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+#healthBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #37e07a, #8bf0a8);
+  transition: width 0.15s ease-out, background 0.3s ease;
+}
+
+#healthLabel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+#scoreLabel, #waveLabel {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at center, rgba(20,24,50,0.92) 0%, rgba(2,3,10,0.97) 75%);
+  color: #eaf0ff;
+  z-index: 10;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h1 {
+  font-size: 34px;
+  letter-spacing: 2px;
+  line-height: 1.25;
+  color: #ffffff;
+  text-shadow: 0 0 18px rgba(120,170,255,0.6);
+}
+
+.overlay p {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #b8c2e0;
+  max-width: 320px;
+}
+
+.overlay button {
+  margin-top: 8px;
+  padding: 16px 36px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #05060f;
+  background: linear-gradient(180deg, #7fe0ff, #4aa8ff);
+  border: none;
+  border-radius: 30px;
+  box-shadow: 0 6px 20px rgba(74,168,255,0.45);
+}
+
+.overlay button:active {
+  transform: scale(0.96);
+}
