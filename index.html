@@ -17,19 +17,42 @@
       <div id="healthBar"></div>
       <div id="healthLabel">100</div>
     </div>
+    <div id="currencyLabel">Gold: 60</div>
     <div id="scoreLabel">Score: 0</div>
     <div id="waveLabel">Wave 1</div>
   </div>
 
   <div id="statusRow">
-    <div id="frozenStatus" class="status-chip status-frozen hidden">FROZEN</div>
     <div id="burnStatus" class="status-chip status-burn hidden">TAKING DAMAGE</div>
     <div id="powerStatus" class="status-chip status-power hidden">POWER SHOT</div>
   </div>
 
+  <div id="towerTray" class="hidden">
+    <button class="tower-btn" data-type="turret">
+      <span class="tower-icon icon-turret"></span>
+      <span class="tower-name">Turret</span>
+      <span class="tower-cost">20</span>
+    </button>
+    <button class="tower-btn" data-type="missile">
+      <span class="tower-icon icon-missile"></span>
+      <span class="tower-name">Missile</span>
+      <span class="tower-cost">40</span>
+    </button>
+    <button class="tower-btn" data-type="flame">
+      <span class="tower-icon icon-flame"></span>
+      <span class="tower-name">Flame</span>
+      <span class="tower-cost">35</span>
+    </button>
+    <button class="tower-btn" data-type="ice">
+      <span class="tower-icon icon-ice"></span>
+      <span class="tower-name">Ice</span>
+      <span class="tower-cost">35</span>
+    </button>
+  </div>
+
   <div id="startScreen" class="overlay">
     <h1>ASTEROID<br>DESTROYER</h1>
-    <p>Tap anywhere to aim &amp; fire your turret.<br>Don't let the asteroids reach your ship!<br>Watch for icy comets and fiery meteors, and grab power-ups when they drift by.</p>
+    <p>Pick a tower below, then tap an empty slot in a lane to build it. Towers auto-fire at anything in their lane.<br><br>Turrets &amp; missiles only hurt asteroids. <b>Only flame towers can destroy comets.</b> <b>Only ice towers can destroy meteors.</b><br><br>Don't let hazards reach your ship at the bottom!</p>
     <button id="startBtn">TAP TO START</button>
   </div>
 
