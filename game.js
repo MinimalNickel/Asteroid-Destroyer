@@ -482,7 +482,7 @@
         continue;
       }
 
-      if (h.y > H + h.radius + 40) {
+      if (h.y > H + h.radius + 40 || h.x < -h.radius - 40 || h.x > W + h.radius + 40) {
         hazards.splice(i, 1);
         continue;
       }
