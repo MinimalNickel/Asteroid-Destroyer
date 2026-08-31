@@ -1,23 +1,22 @@
 # Asteroid Destroyer
 
-A mobile-friendly 2D lane tower-defense game built with plain HTML5 Canvas and JavaScript (no build step, no dependencies).
+A mobile-friendly 2D turret-defense game built with plain HTML5 Canvas and JavaScript (no build step, no dependencies).
 
-Asteroids, comets, and meteors drift down four lanes toward your ship at the bottom. Pick a tower from the tray and tap an empty slot in a lane to build it — towers auto-fire at whatever's in their lane. Destroying hazards earns gold, which you spend on more towers. Let something reach your ship and it damages your health bar.
-
-Towers aren't all equally matched to every hazard:
-
-- **Turret** and **Missile Launcher** only damage plain asteroids (missiles splash-damage everything nearby). They have no effect on comets or meteors.
-- **Flame Tower** is the *only* tower that can destroy comets (it also damages asteroids).
-- **Ice Tower** is the *only* tower that can destroy meteors (it also damages asteroids).
+You're a turret mounted on a spaceship. Asteroids, comets, and meteors drift in from above — tap anywhere on the screen to aim your turret at that point and fire. Any of them can be destroyed by a normal shot. Destroying something earns score and gold; let something reach your ship and it damages your health bar.
 
 Hazards and effects:
 
-- **Comets** (icy blue) freeze every tower in their lane for a few seconds if they reach the base — those towers stop firing until it thaws.
-- **Meteors** (fiery orange) burn your ship with damage over time instead of a lump hit.
-- Power-ups (**repair kit**, **rocket**, and a rare **nuke**) drift down lanes too — shoot one with any tower to activate it. Left alone, they just fall past with no effect.
-  - Repair kit restores health.
-  - Rocket grants ~8 seconds of one-shot-kill firing across all towers.
-  - Nuke instantly clears every hazard on screen.
+- **Asteroids** split into smaller, faster pieces when hit. Larger ones deal more damage if they reach you.
+- **Comets** (icy blue) freeze your turret for a few seconds if they reach you — no aiming or firing until it thaws.
+- **Meteors** (fiery orange) don't hit all at once — they burn your ship with damage over time.
+
+Clear all the hazards in a wave and you'll get to spend your gold on an upgrade before the next one starts:
+
+- **Health Capacity** — +20 max HP, and fully heals you.
+- **Rate of Fire** — fire faster.
+- **Damage** — +1 damage per shot.
+
+Each upgrade gets a bit more expensive the more you buy it. You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
@@ -30,19 +29,19 @@ python3 -m http.server 8000
 
 ## Controls
 
-- **Tap a tower button** in the tray at the bottom to select it.
-- **Tap an empty slot** in a lane to build the selected tower there (costs gold).
-- Towers fire automatically — there's no manual aiming.
+- **Tap** anywhere above the ship: aims the turret at that point and fires.
+- **Drag**: keep aiming while your finger moves.
+- **On the wave-clear screen**: tap an upgrade card to buy and apply it (if you can afford it), or tap "Next Wave" to skip.
 
 ## Gameplay
 
-- Health starts at 100; gold starts at 60.
-- Each lane has 3 build slots. Hazards travel straight down their lane toward the base.
-- Difficulty (spawn rate and hazard speed) ramps up every ~18 seconds (waves). Comets appear from wave 2, meteors from wave 3.
+- Health starts at 100; gold starts at 0.
+- Each wave spawns a fixed number of hazards (more each wave). Clear them all to advance.
+- Comets appear from wave 2, meteors from wave 3.
 - Best score is saved locally on your device.
 
 ## Files
 
-- `index.html` — page structure, HUD, tower tray, and overlay markup
-- `style.css` — mobile-first styling, safe-area aware HUD and tower tray
-- `game.js` — game loop, lanes, towers, hazards, power-ups, rendering
+- `index.html` — page structure, HUD, and overlay markup (start, wave-clear upgrades, game over)
+- `style.css` — mobile-first styling, safe-area aware HUD and upgrade cards
+- `game.js` — game loop, hazards, upgrades, input handling, rendering
