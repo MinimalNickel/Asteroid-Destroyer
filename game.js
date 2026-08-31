@@ -56,8 +56,8 @@
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
   const BASE_MAX_HEALTH = 100;
-  const UPGRADE_COST_BASE = 20;
-  const UPGRADE_COST_STEP = 15;
+  const UPGRADE_COST_BASE = 40;
+  const UPGRADE_COST_STEP = 25;
   let upgrades, maxHealth, fireCooldown, bulletDamage;
 
   function upgradeCost(level) {
@@ -65,7 +65,7 @@
   }
 
   function applyUpgradeEffects() {
-    maxHealth = BASE_MAX_HEALTH + upgrades.health * 20;
+    maxHealth = BASE_MAX_HEALTH + upgrades.health * 10;
     fireCooldown = Math.max(0.05, BASE_FIRE_COOLDOWN * Math.pow(0.88, upgrades.fireRate));
     bulletDamage = 1 + upgrades.damage;
   }
@@ -173,15 +173,16 @@
     });
   }
 
-  function spawnComet() {
-    const radius = rand(20, 27);
+  function spawnComet(big = false) {
+    const radius = big ? rand(34, 42) : rand(20, 27);
     const sx = rand(radius, W - radius);
     const sy = -radius - rand(0, 120);
-    const speedBase = 70 + wave * 3;
+    const speedBase = (70 + wave * 3) * (big ? 0.75 : 1);
     const targetX = ship.x + rand(-140, 140);
     const ang = Math.atan2(ship.y - sy, targetX - sx) + rand(-0.25, 0.25);
     hazards.push({
       kind: 'comet',
+      big,
       x: sx, y: sy,
       vx: Math.cos(ang) * speedBase,
       vy: Math.sin(ang) * speedBase,
@@ -189,20 +190,21 @@
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-2, 2),
       shape: makeAsteroidShape(radius),
-      hp: 2,
+      hp: big ? 5 : 2,
       trailTimer: 0
     });
   }
 
-  function spawnMeteor() {
-    const radius = rand(24, 32);
+  function spawnMeteor(big = false) {
+    const radius = big ? rand(38, 46) : rand(24, 32);
     const sx = rand(radius, W - radius);
     const sy = -radius - rand(0, 120);
-    const speedBase = 50 + wave * 3;
+    const speedBase = (50 + wave * 3) * (big ? 0.75 : 1);
     const targetX = ship.x + rand(-140, 140);
     const ang = Math.atan2(ship.y - sy, targetX - sx) + rand(-0.3, 0.3);
     hazards.push({
       kind: 'meteor',
+      big,
       x: sx, y: sy,
       vx: Math.cos(ang) * speedBase,
       vy: Math.sin(ang) * speedBase,
@@ -210,7 +212,7 @@
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-1.5, 1.5),
       shape: makeAsteroidShape(radius),
-      hp: 2,
+      hp: big ? 6 : 2,
       trailTimer: 0
     });
   }
@@ -236,15 +238,23 @@
 
   function scoreForHazard(h) {
     if (h.kind === 'asteroid') return scoreForTier(h.tier);
-    if (h.kind === 'comet') return 25;
-    if (h.kind === 'meteor') return 30;
+    if (h.kind === 'comet') return h.big ? 60 : 25;
+    if (h.kind === 'meteor') return h.big ? 70 : 30;
     return 10;
   }
 
+  function goldForHazard(h) {
+    if (h.kind === 'asteroid') {
+      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 5 : 8;
+    }
+    if (h.kind === 'comet') return h.big ? 15 : 8;
+    if (h.kind === 'meteor') return h.big ? 18 : 10;
+    return 3;
+  }
+
   function awardKill(h) {
-    const v = scoreForHazard(h);
-    score += v;
-    currency += v;
+    score += scoreForHazard(h);
+    currency += goldForHazard(h);
   }
 
   // ---- Particles ----
@@ -264,14 +274,14 @@
     }
   }
 
-  function trailParticle(x, y, color) {
+  function trailParticle(x, y, color, scale = 1) {
     particles.push({
-      x: x + rand(-4, 4), y: y + rand(-4, 4),
+      x: x + rand(-4, 4) * scale, y: y + rand(-4, 4) * scale,
       vx: rand(-10, 10), vy: rand(-10, 10),
       life: rand(0.2, 0.4),
       age: 0,
       color,
-      r: rand(1, 2.2)
+      r: rand(1, 2.2) * scale
     });
   }
 
@@ -425,8 +435,10 @@
       if (spawnTimer <= 0) {
         spawnTimer = spawnInterval;
         const roll = Math.random();
-        if (wave >= 3 && roll < 0.15) spawnMeteor();
-        else if (wave >= 2 && roll < 0.32) spawnComet();
+        if (wave >= 5 && roll < 0.04) spawnMeteor(true);
+        else if (wave >= 4 && roll < 0.09) spawnComet(true);
+        else if (wave >= 3 && roll < 0.24) spawnMeteor(false);
+        else if (wave >= 2 && roll < 0.41) spawnComet(false);
         else spawnAsteroid('large');
         enemiesToSpawn -= 1;
       }
@@ -456,8 +468,13 @@
       if (h.kind === 'comet' || h.kind === 'meteor') {
         h.trailTimer -= dt;
         if (h.trailTimer <= 0) {
-          h.trailTimer = 0.05;
-          trailParticle(h.x, h.y, h.kind === 'comet' ? '#bfefff' : '#ff9a5a');
+          h.trailTimer = 0.04;
+          const scale = h.big ? 1.6 : 1;
+          if (h.kind === 'comet') {
+            trailParticle(h.x, h.y, Math.random() < 0.5 ? '#bfefff' : '#e8faff', scale);
+          } else {
+            trailParticle(h.x, h.y, Math.random() < 0.5 ? '#ff9a5a' : '#ffd166', scale);
+          }
         }
       }
 
@@ -466,13 +483,13 @@
           health -= damageForTier(h.tier);
           burst(h.x, h.y, '#ff6b6b', 20);
         } else if (h.kind === 'comet') {
-          health -= 8;
-          ship.frozenTimer = Math.max(ship.frozenTimer, 2.5);
-          burst(h.x, h.y, '#bfefff', 24);
+          health -= h.big ? 14 : 8;
+          ship.frozenTimer = Math.max(ship.frozenTimer, h.big ? 4 : 2.5);
+          burst(h.x, h.y, '#bfefff', h.big ? 34 : 24);
         } else if (h.kind === 'meteor') {
-          ship.dotTicksRemaining = Math.min(6, ship.dotTicksRemaining + 4);
+          ship.dotTicksRemaining = Math.min(10, ship.dotTicksRemaining + (h.big ? 7 : 4));
           ship.dotTimer = 0;
-          burst(h.x, h.y, '#ff9a5a', 20);
+          burst(h.x, h.y, '#ff9a5a', h.big ? 28 : 20);
         }
         screenShake = Math.max(screenShake, 0.35);
         hazards.splice(i, 1);
@@ -584,7 +601,7 @@
       ctx.fillStyle = '#8b7d6b';
       ctx.strokeStyle = '#3f372c';
     }
-    ctx.lineWidth = 2;
+    ctx.lineWidth = h.big ? 4 : 2;
     ctx.fill();
     ctx.stroke();
     ctx.restore();

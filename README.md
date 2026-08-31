@@ -9,14 +9,15 @@ Hazards and effects:
 - **Asteroids** split into smaller, faster pieces when hit. Larger ones deal more damage if they reach you.
 - **Comets** (icy blue) freeze your turret for a few seconds if they reach you — no aiming or firing until it thaws.
 - **Meteors** (fiery orange) don't hit all at once — they burn your ship with damage over time.
+- From wave 4 (comets) and wave 5 (meteors), rare **big** versions show up — bigger, tougher (multiple hits to destroy), slower, and hit harder if they reach you, but worth more gold and score.
 
 Clear all the hazards in a wave and you'll get to spend your gold on an upgrade before the next one starts:
 
-- **Health Capacity** — +20 max HP, and fully heals you.
+- **Health Capacity** — +10 max HP, and fully heals you.
 - **Rate of Fire** — fire faster.
 - **Damage** — +1 damage per shot.
 
-Each upgrade gets a bit more expensive the more you buy it. You can also skip an upgrade to save your gold for later.
+Each upgrade gets more expensive the more you buy it (40 gold, then +25 per level). You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
