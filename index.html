@@ -17,7 +17,7 @@
       <div id="healthBar"></div>
       <div id="healthLabel">100</div>
     </div>
-    <div id="currencyLabel">Gold: 0</div>
+    <div id="pointsLabel">Points: 0</div>
     <div id="scoreLabel">Score: 0</div>
     <div id="waveLabel">Wave 1</div>
   </div>
@@ -29,31 +29,31 @@
 
   <div id="startScreen" class="overlay">
     <h1>ASTEROID<br>DESTROYER</h1>
-    <p>Tap anywhere to aim &amp; fire your turret.<br>Don't let anything reach your ship!<br>Watch for icy comets that freeze your turret and fiery meteors that burn over time.<br><br>Clear each wave to spend gold on upgrades.</p>
+    <p>Hold your finger on the screen to aim &amp; fire your turret. Move your finger to steer it.<br>Don't let anything reach your ship!<br>Watch for icy comets that freeze your turret and fiery meteors that burn over time.<br><br>Clear each wave to earn a point you can spend on an upgrade.</p>
     <button id="startBtn">TAP TO START</button>
   </div>
 
   <div id="upgradeScreen" class="overlay hidden">
     <h1>WAVE CLEAR</h1>
-    <p id="upgradeGold">Gold: 0</p>
+    <p id="upgradePoints">Points: 0</p>
     <div id="upgradeCards">
       <button class="upgrade-card" data-stat="health">
         <span class="upgrade-name">Health Capacity</span>
         <span class="upgrade-level" id="healthLevel">Lv. 0</span>
         <span class="upgrade-desc">+10 max HP, full heal</span>
-        <span class="upgrade-cost" id="healthCost">40</span>
+        <span class="upgrade-cost" id="healthCost">1</span>
       </button>
       <button class="upgrade-card" data-stat="fireRate">
         <span class="upgrade-name">Rate of Fire</span>
         <span class="upgrade-level" id="fireRateLevel">Lv. 0</span>
         <span class="upgrade-desc">Fire faster</span>
-        <span class="upgrade-cost" id="fireRateCost">40</span>
+        <span class="upgrade-cost" id="fireRateCost">1</span>
       </button>
       <button class="upgrade-card" data-stat="damage">
         <span class="upgrade-name">Damage</span>
         <span class="upgrade-level" id="damageLevel">Lv. 0</span>
         <span class="upgrade-desc">+1 damage per shot</span>
-        <span class="upgrade-cost" id="damageCost">40</span>
+        <span class="upgrade-cost" id="damageCost">1</span>
       </button>
     </div>
     <button id="skipUpgradeBtn">NEXT WAVE</button>
