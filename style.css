@@ -68,13 +68,13 @@ html, body {
   letter-spacing: 0.5px;
 }
 
-#currencyLabel, #scoreLabel, #waveLabel {
+#pointsLabel, #scoreLabel, #waveLabel {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-#currencyLabel {
+#pointsLabel {
   color: #ffe27a;
 }
 
@@ -161,7 +161,7 @@ html, body {
   transform: scale(0.96);
 }
 
-#upgradeGold {
+#upgradePoints {
   color: #ffe27a;
   font-weight: 700;
   font-size: 18px;

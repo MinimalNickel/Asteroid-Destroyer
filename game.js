@@ -4,7 +4,7 @@
 
   const healthBarEl = document.getElementById('healthBar');
   const healthLabelEl = document.getElementById('healthLabel');
-  const currencyLabelEl = document.getElementById('currencyLabel');
+  const pointsLabelEl = document.getElementById('pointsLabel');
   const scoreLabelEl = document.getElementById('scoreLabel');
   const waveLabelEl = document.getElementById('waveLabel');
   const frozenStatusEl = document.getElementById('frozenStatus');
@@ -17,7 +17,7 @@
   const skipUpgradeBtn = document.getElementById('skipUpgradeBtn');
   const finalScoreEl = document.getElementById('finalScore');
   const bestScoreEl = document.getElementById('bestScore');
-  const upgradeGoldEl = document.getElementById('upgradeGold');
+  const upgradePointsEl = document.getElementById('upgradePoints');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
 
   const BEST_KEY = 'asteroidDestroyer.best';
@@ -46,22 +46,21 @@
   let state = STATE.MENU;
 
   let ship, bullets, hazards, particles, stars;
-  let score = 0, currency = 0, health = 100, wave = 1;
+  let score = 0, points = 0, health = 100, wave = 1;
   let spawnTimer = 0, spawnInterval = 1.6;
   let enemiesToSpawn = 0;
   let screenShake = 0;
+  let isFiring = false;
   const DOT_TICK_INTERVAL = 0.6;
   const DOT_TICK_DAMAGE = 6;
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
   const BASE_MAX_HEALTH = 100;
-  const UPGRADE_COST_BASE = 40;
-  const UPGRADE_COST_STEP = 25;
   let upgrades, maxHealth, fireCooldown, bulletDamage;
 
   function upgradeCost(level) {
-    return UPGRADE_COST_BASE + level * UPGRADE_COST_STEP;
+    return level + 1;
   }
 
   function applyUpgradeEffects() {
@@ -105,7 +104,7 @@
     hazards = [];
     particles = [];
     score = 0;
-    currency = 0;
+    points = 0;
     health = maxHealth;
     wave = 1;
     spawnTimer = 0;
@@ -124,7 +123,7 @@
     else if (pct > 25) healthBarEl.style.background = 'linear-gradient(90deg, #e0c437, #f0e08b)';
     else healthBarEl.style.background = 'linear-gradient(90deg, #e03737, #f08b8b)';
     healthLabelEl.textContent = Math.max(0, Math.round(health)) + ' / ' + maxHealth;
-    currencyLabelEl.textContent = 'Gold: ' + currency;
+    pointsLabelEl.textContent = 'Points: ' + points;
     scoreLabelEl.textContent = 'Score: ' + score;
     waveLabelEl.textContent = 'Wave ' + wave;
   }
@@ -228,6 +227,18 @@
     }
   }
 
+  function splitBigHazard(h) {
+    for (let i = 0; i < 2; i++) {
+      if (h.kind === 'comet') spawnComet(false);
+      else spawnMeteor(false);
+      const nh = hazards[hazards.length - 1];
+      nh.x = h.x + rand(-8, 8);
+      nh.y = h.y + rand(-8, 8);
+      nh.vx += rand(-30, 30);
+      nh.vy += rand(-30, 30);
+    }
+  }
+
   function damageForTier(tier) {
     return tier === 'large' ? 26 : tier === 'medium' ? 16 : 9;
   }
@@ -243,18 +254,8 @@
     return 10;
   }
 
-  function goldForHazard(h) {
-    if (h.kind === 'asteroid') {
-      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 5 : 8;
-    }
-    if (h.kind === 'comet') return h.big ? 15 : 8;
-    if (h.kind === 'meteor') return h.big ? 18 : 10;
-    return 3;
-  }
-
   function awardKill(h) {
     score += scoreForHazard(h);
-    currency += goldForHazard(h);
   }
 
   // ---- Particles ----
@@ -310,29 +311,45 @@
     if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
   }
 
-  function handlePointer(clientX, clientY) {
+  function startFiring(clientX, clientY) {
     if (state !== STATE.PLAYING) return;
-    if (ship.frozenTimer > 0) return;
-    aimAt(clientX, clientY);
-    fireBullet();
+    isFiring = true;
+    if (ship.frozenTimer <= 0) aimAt(clientX, clientY);
+  }
+
+  function updateAim(clientX, clientY) {
+    if (state === STATE.PLAYING && isFiring && ship.frozenTimer <= 0) aimAt(clientX, clientY);
+  }
+
+  function stopFiring() {
+    isFiring = false;
   }
 
   canvas.addEventListener('pointerdown', (e) => {
-    handlePointer(e.clientX, e.clientY);
+    startFiring(e.clientX, e.clientY);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (e.pressure === 0 && e.pointerType === 'mouse') return;
-    if (state === STATE.PLAYING && e.buttons > 0 && ship.frozenTimer <= 0) aimAt(e.clientX, e.clientY);
+    if (e.buttons > 0) updateAim(e.clientX, e.clientY);
   });
+  canvas.addEventListener('pointerup', stopFiring);
+  canvas.addEventListener('pointercancel', stopFiring);
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    for (const t of e.changedTouches) handlePointer(t.clientX, t.clientY);
+    const t = e.changedTouches[0];
+    startFiring(t.clientX, t.clientY);
   }, { passive: false });
   canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    if (state === STATE.PLAYING && e.touches.length && ship.frozenTimer <= 0) {
-      aimAt(e.touches[0].clientX, e.touches[0].clientY);
-    }
+    if (e.touches.length) updateAim(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    stopFiring();
+  }, { passive: false });
+  canvas.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    stopFiring();
   }, { passive: false });
 
   startBtn.addEventListener('click', startGame);
@@ -343,8 +360,8 @@
       const stat = card.dataset.stat;
       const level = upgrades[stat];
       const cost = upgradeCost(level);
-      if (currency < cost) return;
-      currency -= cost;
+      if (points < cost) return;
+      points -= cost;
       upgrades[stat] += 1;
       applyUpgradeEffects();
       if (stat === 'health') health = maxHealth;
@@ -361,19 +378,21 @@
   }
 
   function updateUpgradeScreen() {
-    upgradeGoldEl.textContent = 'Gold: ' + currency;
+    upgradePointsEl.textContent = 'Points: ' + points;
     ['health', 'fireRate', 'damage'].forEach(stat => {
       const level = upgrades[stat];
       const cost = upgradeCost(level);
       document.getElementById(stat + 'Level').textContent = 'Lv. ' + level;
       document.getElementById(stat + 'Cost').textContent = cost;
       const card = upgradeCards.find(c => c.dataset.stat === stat);
-      card.classList.toggle('unaffordable', currency < cost);
+      card.classList.toggle('unaffordable', points < cost);
     });
   }
 
   function showWaveClear() {
     state = STATE.UPGRADE;
+    points += 1;
+    updateHud();
     updateUpgradeScreen();
     upgradeScreen.classList.remove('hidden');
   }
@@ -428,6 +447,9 @@
       while (da < -Math.PI) da += Math.PI * 2;
       ship.angle += da * clamp(dt * 12, 0, 1);
     }
+
+    // hold-to-fire: keep shooting while the finger/pointer is held down
+    if (isFiring && ship.frozenTimer <= 0) fireBullet();
 
     // spawn hazards for this wave
     if (enemiesToSpawn > 0) {
@@ -518,6 +540,7 @@
             awardKill(h);
             burst(h.x, h.y, '#ffd27f', 18);
             if (h.kind === 'asteroid') splitAsteroid(h);
+            else if ((h.kind === 'comet' || h.kind === 'meteor') && h.big) splitBigHazard(h);
             hazards.splice(i, 1);
             updateHud();
           }
