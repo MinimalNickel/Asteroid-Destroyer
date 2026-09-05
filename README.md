@@ -2,22 +2,23 @@
 
 A mobile-friendly 2D turret-defense game built with plain HTML5 Canvas and JavaScript (no build step, no dependencies).
 
-You're a turret mounted on a spaceship. Asteroids, comets, and meteors drift in from above — hold your finger on the screen to aim your turret and fire continuously; move your finger to steer it. Any of them can be destroyed by a normal shot. Destroying something earns score; let something reach your ship and it damages your health bar.
+You're a turret mounted on a spaceship. Asteroids, comets, and meteors drift in from above — hold your finger on the screen to aim your turret and fire continuously; move your finger to steer it. Any of them can be destroyed by a normal shot. There's no health bar: one unblocked hit destroys you. Destroying something earns gold and score, which you can spend between waves.
 
 Hazards and effects:
 
-- **Asteroids** split into smaller, faster pieces when hit. Larger ones deal more damage if they reach you.
-- **Comets** (icy blue) freeze your turret for a few seconds if they reach you — no aiming or firing until it thaws.
-- **Meteors** (fiery orange) don't hit all at once — they burn your ship with damage over time.
-- From wave 4 (comets) and wave 5 (meteors), rare **big** versions show up — bigger, tougher (multiple hits to destroy), slower, and hit harder if they reach you, but worth more score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
+- **Asteroids** split into smaller, faster pieces when hit. Reaching your ship consumes one shield — with no shields left, it's instant death.
+- **Comets** (icy blue) freeze your turret for a few seconds if they reach you. They don't damage you or touch your shields.
+- **Meteors** (fiery orange) wipe out *all* your shields at once if they reach you, no matter how many you have — or kill you outright if you have none.
+- From wave 4 (comets) and wave 5 (meteors), rare **big** versions show up — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
+- Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually. Hazards also aim more aggressively at your ship than they used to.
 
-Clear a wave and you earn 1 point, which you can spend on an upgrade before the next wave starts:
+Clear a wave and you can spend your gold on an upgrade before the next one starts:
 
-- **Health Capacity** — +10 max HP, and fully heals you.
+- **Shield** — blocks one asteroid hit (a meteor still wipes all your shields at once). Max 3. The first is cheap, the second moderate, the third expensive.
 - **Rate of Fire** — fire faster.
 - **Damage** — +1 damage per shot.
 
-Each upgrade costs more the more you buy it — 1 point the first time, then 2, then 3, then 4, and so on. You can also skip an upgrade to save your points for later.
+Rate of Fire and Damage get more expensive the more you buy them. You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
@@ -36,13 +37,14 @@ python3 -m http.server 8000
 
 ## Gameplay
 
-- Health starts at 100; points start at 0.
-- Each wave spawns a fixed number of hazards (more each wave). Clear them all to advance.
+- No health bar — an unblocked hit ends the run. Shields (up to 3) are your only buffer.
+- Gold starts at 0, earned per kill (asteroids/comets/meteors are worth different amounts; bigger and tougher hazards pay more).
+- Each wave spawns a fixed number of hazards (more each wave). Everything must be destroyed to clear it — nothing despawns by leaving the screen.
 - Comets appear from wave 2, meteors from wave 3.
 - Best score is saved locally on your device.
 
 ## Files
 
 - `index.html` — page structure, HUD, and overlay markup (start, wave-clear upgrades, game over)
-- `style.css` — mobile-first styling, safe-area aware HUD and upgrade cards
+- `style.css` — mobile-first styling, safe-area aware HUD, shield pips, and upgrade cards
 - `game.js` — game loop, hazards, upgrades, input handling, rendering

@@ -37,44 +37,33 @@ html, body {
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
-#healthWrap {
-  position: relative;
+#shieldsWrap {
   flex: 1;
-  height: 22px;
-  background: rgba(255,255,255,0.08);
-  border: 2px solid rgba(255,255,255,0.25);
-  border-radius: 11px;
-  overflow: hidden;
-}
-
-#healthBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, #37e07a, #8bf0a8);
-  transition: width 0.15s ease-out, background 0.3s ease;
-}
-
-#healthLabel {
-  position: absolute;
-  inset: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  gap: 6px;
 }
 
-#pointsLabel, #scoreLabel, #waveLabel {
+.shield-pip {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(159,227,255,0.5);
+  background: rgba(255,255,255,0.06);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.shield-pip.filled {
+  background: radial-gradient(circle at 35% 30%, #e8faff, #6fc8ff 60%, #2a6a8f);
+  box-shadow: 0 0 8px rgba(111,200,255,0.7);
+}
+
+#currencyLabel, #scoreLabel, #waveLabel {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-#pointsLabel {
+#currencyLabel {
   color: #ffe27a;
 }
 
@@ -104,10 +93,6 @@ html, body {
 
 .status-frozen {
   background: linear-gradient(90deg, #8fe8ff, #d6f6ff);
-}
-
-.status-burn {
-  background: linear-gradient(90deg, #ff9a5a, #ffd27f);
 }
 
 .overlay {
@@ -161,7 +146,7 @@ html, body {
   transform: scale(0.96);
 }
 
-#upgradePoints {
+#upgradeGold {
   color: #ffe27a;
   font-weight: 700;
   font-size: 18px;
