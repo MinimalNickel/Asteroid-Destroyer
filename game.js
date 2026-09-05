@@ -2,13 +2,11 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
-  const healthBarEl = document.getElementById('healthBar');
-  const healthLabelEl = document.getElementById('healthLabel');
-  const pointsLabelEl = document.getElementById('pointsLabel');
+  const shieldPips = Array.from(document.querySelectorAll('.shield-pip'));
+  const currencyLabelEl = document.getElementById('currencyLabel');
   const scoreLabelEl = document.getElementById('scoreLabel');
   const waveLabelEl = document.getElementById('waveLabel');
   const frozenStatusEl = document.getElementById('frozenStatus');
-  const burnStatusEl = document.getElementById('burnStatus');
   const startScreen = document.getElementById('startScreen');
   const upgradeScreen = document.getElementById('upgradeScreen');
   const gameOverScreen = document.getElementById('gameOverScreen');
@@ -17,7 +15,7 @@
   const skipUpgradeBtn = document.getElementById('skipUpgradeBtn');
   const finalScoreEl = document.getElementById('finalScore');
   const bestScoreEl = document.getElementById('bestScore');
-  const upgradePointsEl = document.getElementById('upgradePoints');
+  const upgradeGoldEl = document.getElementById('upgradeGold');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
 
   const BEST_KEY = 'asteroidDestroyer.best';
@@ -46,25 +44,25 @@
   let state = STATE.MENU;
 
   let ship, bullets, hazards, particles, stars;
-  let score = 0, points = 0, health = 100, wave = 1;
+  let score = 0, currency = 0, shields = 0, wave = 1;
   let spawnTimer = 0, spawnInterval = 1.6;
   let enemiesToSpawn = 0;
   let screenShake = 0;
   let isFiring = false;
-  const DOT_TICK_INTERVAL = 0.6;
-  const DOT_TICK_DAMAGE = 6;
+  const MAX_SHIELDS = 3;
+  const SHIELD_COSTS = [30, 90, 250];
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
-  const BASE_MAX_HEALTH = 100;
-  let upgrades, maxHealth, fireCooldown, bulletDamage;
+  const UPGRADE_COST_BASE = 40;
+  const UPGRADE_COST_STEP = 25;
+  let upgrades, fireCooldown, bulletDamage;
 
   function upgradeCost(level) {
-    return level + 1;
+    return UPGRADE_COST_BASE + level * UPGRADE_COST_STEP;
   }
 
   function applyUpgradeEffects() {
-    maxHealth = BASE_MAX_HEALTH + upgrades.health * 10;
     fireCooldown = Math.max(0.05, BASE_FIRE_COOLDOWN * Math.pow(0.88, upgrades.fireRate));
     bulletDamage = 1 + upgrades.damage;
   }
@@ -87,8 +85,9 @@
   }
 
   function resetGame() {
-    upgrades = { health: 0, fireRate: 0, damage: 0 };
+    upgrades = { fireRate: 0, damage: 0 };
     applyUpgradeEffects();
+    shields = 0;
     ship = {
       x: W / 2,
       y: H - 90,
@@ -96,16 +95,13 @@
       angle: -Math.PI / 2,
       targetAngle: -Math.PI / 2,
       frozenTimer: 0,
-      dotTicksRemaining: 0,
-      dotTimer: 0,
       fireTimer: 0
     };
     bullets = [];
     hazards = [];
     particles = [];
     score = 0;
-    points = 0;
-    health = maxHealth;
+    currency = 0;
     wave = 1;
     spawnTimer = 0;
     spawnInterval = 1.6;
@@ -117,20 +113,14 @@
   }
 
   function updateHud() {
-    const pct = clamp((health / maxHealth) * 100, 0, 100);
-    healthBarEl.style.width = pct + '%';
-    if (pct > 50) healthBarEl.style.background = 'linear-gradient(90deg, #37e07a, #8bf0a8)';
-    else if (pct > 25) healthBarEl.style.background = 'linear-gradient(90deg, #e0c437, #f0e08b)';
-    else healthBarEl.style.background = 'linear-gradient(90deg, #e03737, #f08b8b)';
-    healthLabelEl.textContent = Math.max(0, Math.round(health)) + ' / ' + maxHealth;
-    pointsLabelEl.textContent = 'Points: ' + points;
+    shieldPips.forEach((el, i) => el.classList.toggle('filled', i < shields));
+    currencyLabelEl.textContent = 'Gold: ' + currency;
     scoreLabelEl.textContent = 'Score: ' + score;
     waveLabelEl.textContent = 'Wave ' + wave;
   }
 
   function updateStatusHud() {
     frozenStatusEl.classList.toggle('hidden', ship.frozenTimer <= 0);
-    burnStatusEl.classList.toggle('hidden', ship.dotTicksRemaining <= 0);
   }
 
   // ---- Hazard shapes ----
@@ -145,6 +135,28 @@
     return shape;
   }
 
+  // Tight, aggressive homing toward the ship -- used both on spawn and when a
+  // hazard loops back in after leaving the screen.
+  function aimedVelocity(sx, sy, speedBase, jitter) {
+    const targetX = ship.x + rand(-60, 60);
+    const targetY = ship.y;
+    const ang = Math.atan2(targetY - sy, targetX - sx) + rand(-jitter, jitter);
+    const speed = speedBase * rand(0.92, 1.08);
+    return { vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed };
+  }
+
+  function asteroidSpeed(tier) {
+    return { large: 28, medium: 42, small: 60 }[tier] + wave * 2.2;
+  }
+
+  function cometSpeed(big) {
+    return (70 + wave * 3) * (big ? 0.75 : 1);
+  }
+
+  function meteorSpeed(big) {
+    return (50 + wave * 3) * (big ? 0.75 : 1);
+  }
+
   function spawnAsteroid(size = null, x = null, y = null) {
     const tier = size || 'large';
     const radiusMap = { large: rand(34, 44), medium: rand(20, 28), small: rand(11, 16) };
@@ -154,15 +166,11 @@
       sx = rand(radius, W - radius);
       sy = -radius - rand(0, 120);
     }
-    const speedBase = { large: 28, medium: 42, small: 60 }[tier] + wave * 2.2;
-    const targetX = ship.x + rand(-140, 140);
-    const targetY = ship.y;
-    const ang = Math.atan2(targetY - sy, targetX - sx) + rand(-0.35, 0.35);
+    const v = aimedVelocity(sx, sy, asteroidSpeed(tier), 0.15);
     hazards.push({
       kind: 'asteroid',
       x: sx, y: sy,
-      vx: Math.cos(ang) * speedBase * rand(0.7, 1.1),
-      vy: Math.sin(ang) * speedBase * rand(0.7, 1.1),
+      vx: v.vx, vy: v.vy,
       radius,
       tier,
       rot: rand(0, Math.PI * 2),
@@ -176,15 +184,12 @@
     const radius = big ? rand(34, 42) : rand(20, 27);
     const sx = rand(radius, W - radius);
     const sy = -radius - rand(0, 120);
-    const speedBase = (70 + wave * 3) * (big ? 0.75 : 1);
-    const targetX = ship.x + rand(-140, 140);
-    const ang = Math.atan2(ship.y - sy, targetX - sx) + rand(-0.25, 0.25);
+    const v = aimedVelocity(sx, sy, cometSpeed(big), 0.12);
     hazards.push({
       kind: 'comet',
       big,
       x: sx, y: sy,
-      vx: Math.cos(ang) * speedBase,
-      vy: Math.sin(ang) * speedBase,
+      vx: v.vx, vy: v.vy,
       radius,
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-2, 2),
@@ -198,15 +203,12 @@
     const radius = big ? rand(38, 46) : rand(24, 32);
     const sx = rand(radius, W - radius);
     const sy = -radius - rand(0, 120);
-    const speedBase = (50 + wave * 3) * (big ? 0.75 : 1);
-    const targetX = ship.x + rand(-140, 140);
-    const ang = Math.atan2(ship.y - sy, targetX - sx) + rand(-0.3, 0.3);
+    const v = aimedVelocity(sx, sy, meteorSpeed(big), 0.15);
     hazards.push({
       kind: 'meteor',
       big,
       x: sx, y: sy,
-      vx: Math.cos(ang) * speedBase,
-      vy: Math.sin(ang) * speedBase,
+      vx: v.vx, vy: v.vy,
       radius,
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-1.5, 1.5),
@@ -214,6 +216,20 @@
       hp: big ? 6 : 2,
       trailTimer: 0
     });
+  }
+
+  // A hazard that drifts off any edge loops back in from the top instead of
+  // despawning -- nothing escapes, everything has to be destroyed.
+  function respawnAtTop(h) {
+    h.x = rand(h.radius, W - h.radius);
+    h.y = -h.radius - rand(0, 80);
+    let speedBase, jitter;
+    if (h.kind === 'asteroid') { speedBase = asteroidSpeed(h.tier); jitter = 0.15; }
+    else if (h.kind === 'comet') { speedBase = cometSpeed(h.big); jitter = 0.12; }
+    else { speedBase = meteorSpeed(h.big); jitter = 0.15; }
+    const v = aimedVelocity(h.x, h.y, speedBase, jitter);
+    h.vx = v.vx;
+    h.vy = v.vy;
   }
 
   function splitAsteroid(a) {
@@ -239,10 +255,6 @@
     }
   }
 
-  function damageForTier(tier) {
-    return tier === 'large' ? 26 : tier === 'medium' ? 16 : 9;
-  }
-
   function scoreForTier(tier) {
     return tier === 'large' ? 10 : tier === 'medium' ? 20 : 35;
   }
@@ -254,8 +266,18 @@
     return 10;
   }
 
+  function goldForHazard(h) {
+    if (h.kind === 'asteroid') {
+      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 5 : 8;
+    }
+    if (h.kind === 'comet') return h.big ? 15 : 8;
+    if (h.kind === 'meteor') return h.big ? 18 : 10;
+    return 3;
+  }
+
   function awardKill(h) {
     score += scoreForHazard(h);
+    currency += goldForHazard(h);
   }
 
   // ---- Particles ----
@@ -358,13 +380,22 @@
   upgradeCards.forEach(card => {
     card.addEventListener('click', () => {
       const stat = card.dataset.stat;
+      if (stat === 'shield') {
+        if (shields >= MAX_SHIELDS) return;
+        const cost = SHIELD_COSTS[shields];
+        if (currency < cost) return;
+        currency -= cost;
+        shields += 1;
+        updateHud();
+        startNextWave();
+        return;
+      }
       const level = upgrades[stat];
       const cost = upgradeCost(level);
-      if (points < cost) return;
-      points -= cost;
+      if (currency < cost) return;
+      currency -= cost;
       upgrades[stat] += 1;
       applyUpgradeEffects();
-      if (stat === 'health') health = maxHealth;
       startNextWave();
     });
   });
@@ -378,21 +409,29 @@
   }
 
   function updateUpgradeScreen() {
-    upgradePointsEl.textContent = 'Points: ' + points;
-    ['health', 'fireRate', 'damage'].forEach(stat => {
+    upgradeGoldEl.textContent = 'Gold: ' + currency;
+    ['fireRate', 'damage'].forEach(stat => {
       const level = upgrades[stat];
       const cost = upgradeCost(level);
       document.getElementById(stat + 'Level').textContent = 'Lv. ' + level;
       document.getElementById(stat + 'Cost').textContent = cost;
       const card = upgradeCards.find(c => c.dataset.stat === stat);
-      card.classList.toggle('unaffordable', points < cost);
+      card.classList.toggle('unaffordable', currency < cost);
     });
+    const shieldCard = upgradeCards.find(c => c.dataset.stat === 'shield');
+    document.getElementById('shieldLevel').textContent = shields + '/' + MAX_SHIELDS;
+    if (shields >= MAX_SHIELDS) {
+      document.getElementById('shieldCost').textContent = 'MAX';
+      shieldCard.classList.add('unaffordable');
+    } else {
+      const cost = SHIELD_COSTS[shields];
+      document.getElementById('shieldCost').textContent = cost;
+      shieldCard.classList.toggle('unaffordable', currency < cost);
+    }
   }
 
   function showWaveClear() {
     state = STATE.UPGRADE;
-    points += 1;
-    updateHud();
     updateUpgradeScreen();
     upgradeScreen.classList.remove('hidden');
   }
@@ -421,24 +460,10 @@
     if (ship.fireTimer > 0) ship.fireTimer -= dt;
 
     // ship status effects
-    let statusChanged = false;
     if (ship.frozenTimer > 0) {
       ship.frozenTimer = Math.max(0, ship.frozenTimer - dt);
-      statusChanged = true;
+      updateStatusHud();
     }
-    if (ship.dotTicksRemaining > 0) {
-      ship.dotTimer -= dt;
-      if (ship.dotTimer <= 0) {
-        ship.dotTimer += DOT_TICK_INTERVAL;
-        ship.dotTicksRemaining -= 1;
-        health -= DOT_TICK_DAMAGE;
-        burst(ship.x, ship.y - ship.radius * 0.5, '#ff9a5a', 6);
-        updateHud();
-        if (health <= 0) { health = 0; updateHud(); endGame(); return; }
-      }
-      statusChanged = true;
-    }
-    if (statusChanged) updateStatusHud();
 
     // turret smoothing (frozen turret stays put)
     if (ship.frozenTimer <= 0) {
@@ -502,27 +527,42 @@
 
       if (dist2(h.x, h.y, ship.x, ship.y) < (h.radius + ship.radius * 0.8) ** 2) {
         if (h.kind === 'asteroid') {
-          health -= damageForTier(h.tier);
-          burst(h.x, h.y, '#ff6b6b', 20);
+          if (shields > 0) {
+            shields -= 1;
+            burst(h.x, h.y, '#9fe3ff', 20);
+          } else {
+            burst(h.x, h.y, '#ff6b6b', 26);
+            screenShake = 0.5;
+            hazards.splice(i, 1);
+            updateHud();
+            endGame();
+            return;
+          }
         } else if (h.kind === 'comet') {
-          health -= h.big ? 14 : 8;
           ship.frozenTimer = Math.max(ship.frozenTimer, h.big ? 4 : 2.5);
           burst(h.x, h.y, '#bfefff', h.big ? 34 : 24);
         } else if (h.kind === 'meteor') {
-          ship.dotTicksRemaining = Math.min(10, ship.dotTicksRemaining + (h.big ? 7 : 4));
-          ship.dotTimer = 0;
-          burst(h.x, h.y, '#ff9a5a', h.big ? 28 : 20);
+          if (shields > 0) {
+            shields = 0;
+            burst(h.x, h.y, '#9fe3ff', 34);
+          } else {
+            burst(h.x, h.y, '#ff9a5a', 30);
+            screenShake = 0.5;
+            hazards.splice(i, 1);
+            updateHud();
+            endGame();
+            return;
+          }
         }
         screenShake = Math.max(screenShake, 0.35);
         hazards.splice(i, 1);
         updateHud();
         updateStatusHud();
-        if (health <= 0) { health = 0; updateHud(); endGame(); return; }
         continue;
       }
 
       if (h.y > H + h.radius + 40 || h.x < -h.radius - 40 || h.x > W + h.radius + 40) {
-        hazards.splice(i, 1);
+        respawnAtTop(h);
         continue;
       }
     }
@@ -591,13 +631,24 @@
 
     ctx.restore();
 
+    if (shields > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.25 + shields * 0.15;
+      ctx.strokeStyle = '#9fe3ff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, ship.radius + 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if (ship.frozenTimer > 0) {
       ctx.save();
       ctx.globalAlpha = clamp(ship.frozenTimer / 2.5, 0, 1) * 0.5;
       ctx.strokeStyle = '#bfefff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(ship.x, ship.y, ship.radius + 8, 0, Math.PI * 2);
+      ctx.arc(ship.x, ship.y, ship.radius + 18, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -687,9 +738,9 @@
   }
 
   // initial idle scene
-  upgrades = { health: 0, fireRate: 0, damage: 0 };
+  upgrades = { fireRate: 0, damage: 0 };
   applyUpgradeEffects();
-  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, targetAngle: -Math.PI / 2, frozenTimer: 0, dotTicksRemaining: 0, dotTimer: 0, fireTimer: 0 };
+  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, targetAngle: -Math.PI / 2, frozenTimer: 0, fireTimer: 0 };
   bullets = []; hazards = []; particles = [];
   makeStars();
 
