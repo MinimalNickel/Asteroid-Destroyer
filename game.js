@@ -17,6 +17,7 @@
   const bestScoreEl = document.getElementById('bestScore');
   const upgradeGoldEl = document.getElementById('upgradeGold');
   const waveBonusEl = document.getElementById('waveBonus');
+  const upgradeMessageEl = document.getElementById('upgradeMessage');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
 
   const BEST_KEY = 'asteroidDestroyer.best';
@@ -388,27 +389,39 @@
   startBtn.addEventListener('click', startGame);
   retryBtn.addEventListener('click', startGame);
   skipUpgradeBtn.addEventListener('click', startNextWave);
+  function showUpgradeMessage(text) {
+    upgradeMessageEl.textContent = text;
+    upgradeMessageEl.classList.remove('hidden');
+  }
+
+  function clearUpgradeMessage() {
+    upgradeMessageEl.classList.add('hidden');
+  }
+
   upgradeCards.forEach(card => {
     card.addEventListener('click', () => {
       const stat = card.dataset.stat;
       if (stat === 'shield') {
         if (shields >= MAX_SHIELDS) return;
         const cost = SHIELD_COSTS[shields];
-        if (currency < cost) return;
+        if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
         currency -= cost;
         shields += 1;
+        clearUpgradeMessage();
         updateHud();
-        startNextWave();
+        updateUpgradeScreen();
         return;
       }
       const level = upgrades[stat];
       if (level >= MAX_UPGRADE_LEVEL) return;
       const cost = upgradeCost(stat, level);
-      if (currency < cost) return;
+      if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
       currency -= cost;
       upgrades[stat] += 1;
       applyUpgradeEffects();
-      startNextWave();
+      clearUpgradeMessage();
+      updateHud();
+      updateUpgradeScreen();
     });
   });
 
@@ -425,7 +438,7 @@
     ['fireRate', 'damage'].forEach(stat => {
       const level = upgrades[stat];
       const card = upgradeCards.find(c => c.dataset.stat === stat);
-      document.getElementById(stat + 'Level').textContent = 'Lv. ' + level;
+      document.getElementById(stat + 'Level').textContent = level + '/' + MAX_UPGRADE_LEVEL;
       if (level >= MAX_UPGRADE_LEVEL) {
         document.getElementById(stat + 'Cost').textContent = 'MAX';
         card.classList.add('unaffordable');
@@ -456,6 +469,7 @@
     waveBonusEl.textContent = perfect
       ? `+${bonus} gold — Perfect Wave bonus!`
       : `+${bonus} gold (wave clear)`;
+    clearUpgradeMessage();
     updateUpgradeScreen();
     upgradeScreen.classList.remove('hidden');
   }
