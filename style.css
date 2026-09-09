@@ -95,6 +95,10 @@ html, body {
   background: linear-gradient(90deg, #8fe8ff, #d6f6ff);
 }
 
+.status-weakened {
+  background: linear-gradient(90deg, #5CDB7A, #c8ffd9);
+}
+
 .overlay {
   position: fixed;
   inset: 0;

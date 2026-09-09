@@ -7,6 +7,7 @@
   const scoreLabelEl = document.getElementById('scoreLabel');
   const waveLabelEl = document.getElementById('waveLabel');
   const frozenStatusEl = document.getElementById('frozenStatus');
+  const weakenedStatusEl = document.getElementById('weakenedStatus');
   const startScreen = document.getElementById('startScreen');
   const upgradeScreen = document.getElementById('upgradeScreen');
   const gameOverScreen = document.getElementById('gameOverScreen');
@@ -45,7 +46,7 @@
   const STATE = { MENU: 'menu', PLAYING: 'playing', UPGRADE: 'upgrade', OVER: 'over' };
   let state = STATE.MENU;
 
-  let ship, bullets, hazards, particles, stars;
+  let ship, bullets, hazards, particles, stars, enemyBullets;
   let score = 0, currency = 0, shields = 0, wave = 1;
   let spawnTimer = 0, spawnInterval = 1.6;
   let enemiesToSpawn = 0;
@@ -55,13 +56,22 @@
   const MAX_SHIELDS = 3;
   const SHIELD_COSTS = [30, 80, 180];
 
+  // ---- Plasma Cloud (green) -- debuffs the turret instead of costing a shield ----
+  const PLASMA_DEBUFF_DURATION = 5;
+  const PLASMA_DEBUFF_FACTOR = 0.6; // fire rate & damage drop to 60% while weakened
+
+  // ---- Alien Turret -- stationary, shoots back, must be destroyed by the player ----
+  const ALIEN_TURRET_HP = 6;
+  const ALIEN_TURRET_RADIUS = 30;
+  const ALIEN_BOLT_SPEED = 260;
+
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
   const MAX_UPGRADE_LEVEL = 10;
-  const DAMAGE_COST_BASE = 40;
-  const DAMAGE_COST_STEP = 25;
-  const FIRE_RATE_COST_BASE = 50;
-  const FIRE_RATE_COST_STEP = 30;
+  const DAMAGE_COST_BASE = 45;
+  const DAMAGE_COST_STEP = 30;
+  const FIRE_RATE_COST_BASE = 55;
+  const FIRE_RATE_COST_STEP = 35;
   let upgrades, fireCooldown, bulletDamage;
 
   function upgradeCost(stat, level) {
@@ -72,6 +82,17 @@
   function applyUpgradeEffects() {
     fireCooldown = Math.max(0.05, BASE_FIRE_COOLDOWN * Math.pow(0.88, upgrades.fireRate));
     bulletDamage = 1 + upgrades.damage;
+  }
+
+  // While weakened by a Plasma Cloud hit, fire slower and hit softer -- read
+  // at fire/collision time rather than baked into fireCooldown/bulletDamage
+  // so the penalty clears itself the moment the debuff timer runs out.
+  function currentFireCooldown() {
+    return ship.debuffTimer > 0 ? fireCooldown / PLASMA_DEBUFF_FACTOR : fireCooldown;
+  }
+
+  function currentBulletDamage() {
+    return ship.debuffTimer > 0 ? Math.max(1, Math.round(bulletDamage * PLASMA_DEBUFF_FACTOR)) : bulletDamage;
   }
 
   function waveClearBonus(w) {
@@ -106,9 +127,11 @@
       angle: -Math.PI / 2,
       targetAngle: -Math.PI / 2,
       frozenTimer: 0,
+      debuffTimer: 0,
       fireTimer: 0
     };
     bullets = [];
+    enemyBullets = [];
     hazards = [];
     particles = [];
     score = 0;
@@ -133,6 +156,7 @@
 
   function updateStatusHud() {
     frozenStatusEl.classList.toggle('hidden', ship.frozenTimer <= 0);
+    weakenedStatusEl.classList.toggle('hidden', ship.debuffTimer <= 0);
   }
 
   // ---- Hazard shapes ----
@@ -167,6 +191,14 @@
 
   function meteorSpeed(big) {
     return (50 + wave * 3) * (big ? 0.75 : 1);
+  }
+
+  function plasmaCloudSpeed() {
+    return 45 + wave * 2;
+  }
+
+  function alienFireInterval() {
+    return Math.max(0.9, 1.8 - wave * 0.03);
   }
 
   function spawnAsteroid(size = null, x = null, y = null) {
@@ -230,15 +262,57 @@
     });
   }
 
+  function spawnPlasmaCloud() {
+    const radius = rand(28, 36);
+    const sx = rand(radius, W - radius);
+    const sy = -radius - rand(0, 120);
+    const v = aimedVelocity(sx, sy, plasmaCloudSpeed(), 0.14);
+    const puffs = [];
+    const puffCount = Math.floor(rand(5, 7));
+    for (let i = 0; i < puffCount; i++) {
+      const a = (i / puffCount) * Math.PI * 2;
+      puffs.push({ ox: Math.cos(a) * radius * 0.55, oy: Math.sin(a) * radius * 0.4, r: rand(radius * 0.4, radius * 0.6) });
+    }
+    hazards.push({
+      kind: 'plasmaCloud',
+      x: sx, y: sy,
+      vx: v.vx, vy: v.vy,
+      radius,
+      rot: 0,
+      rotSpeed: 0,
+      puffs,
+      hp: 3,
+      trailTimer: 0
+    });
+  }
+
+  function spawnAlienTurret() {
+    const radius = ALIEN_TURRET_RADIUS;
+    const sx = rand(radius + 20, W - radius - 20);
+    const sy = rand(H * 0.12, H * 0.32);
+    hazards.push({
+      kind: 'alienTurret',
+      x: sx, y: sy,
+      vx: 0, vy: 0,
+      radius,
+      rot: 0,
+      rotSpeed: 0,
+      hp: ALIEN_TURRET_HP,
+      fireTimer: rand(0.5, 1.4)
+    });
+  }
+
   // A hazard that drifts off any edge loops back in from the top instead of
   // despawning -- nothing escapes, everything has to be destroyed.
+  // (Alien turrets never move, so they never reach this.)
   function respawnAtTop(h) {
     h.x = rand(h.radius, W - h.radius);
     h.y = -h.radius - rand(0, 80);
     let speedBase, jitter;
     if (h.kind === 'asteroid') { speedBase = asteroidSpeed(h.tier); jitter = 0.15; }
     else if (h.kind === 'comet') { speedBase = cometSpeed(h.big); jitter = 0.12; }
-    else { speedBase = meteorSpeed(h.big); jitter = 0.15; }
+    else if (h.kind === 'meteor') { speedBase = meteorSpeed(h.big); jitter = 0.15; }
+    else { speedBase = plasmaCloudSpeed(); jitter = 0.14; }
     const v = aimedVelocity(h.x, h.y, speedBase, jitter);
     h.vx = v.vx;
     h.vy = v.vy;
@@ -275,16 +349,20 @@
     if (h.kind === 'asteroid') return scoreForTier(h.tier);
     if (h.kind === 'comet') return h.big ? 60 : 25;
     if (h.kind === 'meteor') return h.big ? 70 : 30;
+    if (h.kind === 'plasmaCloud') return 20;
+    if (h.kind === 'alienTurret') return 80;
     return 10;
   }
 
   function goldForHazard(h) {
     if (h.kind === 'asteroid') {
-      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 4 : 5;
+      return h.tier === 'large' ? 1 : h.tier === 'medium' ? 2 : 3;
     }
-    if (h.kind === 'comet') return h.big ? 12 : 7;
-    if (h.kind === 'meteor') return h.big ? 15 : 9;
-    return 3;
+    if (h.kind === 'comet') return h.big ? 5 : 3;
+    if (h.kind === 'meteor') return h.big ? 6 : 4;
+    if (h.kind === 'plasmaCloud') return 3;
+    if (h.kind === 'alienTurret') return 14;
+    return 1;
   }
 
   function awardKill(h) {
@@ -332,7 +410,7 @@
 
   function fireBullet() {
     if (ship.fireTimer > 0) return;
-    ship.fireTimer = fireCooldown;
+    ship.fireTimer = currentFireCooldown();
     const speed = 620;
     const tipX = ship.x + Math.cos(ship.angle) * (ship.radius + 10);
     const tipY = ship.y + Math.sin(ship.angle) * (ship.radius + 10);
@@ -503,6 +581,10 @@
       ship.frozenTimer = Math.max(0, ship.frozenTimer - dt);
       updateStatusHud();
     }
+    if (ship.debuffTimer > 0) {
+      ship.debuffTimer = Math.max(0, ship.debuffTimer - dt);
+      updateStatusHud();
+    }
 
     // turret smoothing (frozen turret stays put)
     if (ship.frozenTimer <= 0) {
@@ -525,6 +607,8 @@
         else if (wave >= 4 && roll < 0.09) spawnComet(true);
         else if (wave >= 3 && roll < 0.24) spawnMeteor(false);
         else if (wave >= 2 && roll < 0.41) spawnComet(false);
+        else if (wave >= 3 && roll < 0.50) spawnPlasmaCloud();
+        else if (wave >= 6 && roll < 0.56) spawnAlienTurret();
         else spawnAsteroid('large');
         enemiesToSpawn -= 1;
       }
@@ -544,6 +628,32 @@
       }
     }
 
+    // alien turret bolts: move + collide with ship (asteroid-style damage)
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+      const eb = enemyBullets[i];
+      eb.x += eb.vx * dt;
+      eb.y += eb.vy * dt;
+      if (eb.x < -20 || eb.x > W + 20 || eb.y < -20 || eb.y > H + 20) {
+        enemyBullets.splice(i, 1);
+        continue;
+      }
+      if (dist2(eb.x, eb.y, ship.x, ship.y) < (ship.radius * 0.7) ** 2) {
+        enemyBullets.splice(i, 1);
+        tookDamageThisWave = true;
+        if (shields > 0) {
+          shields -= 1;
+          burst(eb.x, eb.y, '#c9a6ff', 18);
+          updateHud();
+        } else {
+          burst(eb.x, eb.y, '#c9a6ff', 28);
+          screenShake = 0.5;
+          updateHud();
+          endGame();
+          return;
+        }
+      }
+    }
+
     // hazards: move + collide with ship
     for (let i = hazards.length - 1; i >= 0; i--) {
       const h = hazards[i];
@@ -551,17 +661,34 @@
       h.y += h.vy * dt;
       h.rot += h.rotSpeed * dt;
 
-      if (h.kind === 'comet' || h.kind === 'meteor') {
+      if (h.kind === 'comet' || h.kind === 'meteor' || h.kind === 'plasmaCloud') {
         h.trailTimer -= dt;
         if (h.trailTimer <= 0) {
           h.trailTimer = 0.04;
           const scale = h.big ? 1.6 : 1;
           if (h.kind === 'comet') {
             trailParticle(h.x, h.y, Math.random() < 0.5 ? '#bfefff' : '#e8faff', scale);
-          } else {
+          } else if (h.kind === 'meteor') {
             trailParticle(h.x, h.y, Math.random() < 0.5 ? '#ff9a5a' : '#ffd166', scale);
+          } else {
+            trailParticle(h.x, h.y, Math.random() < 0.5 ? '#7CFC9A' : '#c8ffd9', scale);
           }
         }
+      }
+
+      if (h.kind === 'alienTurret') {
+        h.fireTimer -= dt;
+        if (h.fireTimer <= 0) {
+          h.fireTimer = alienFireInterval();
+          const ang = Math.atan2(ship.y - h.y, ship.x - h.x);
+          enemyBullets.push({
+            x: h.x + Math.cos(ang) * (h.radius + 6),
+            y: h.y + Math.sin(ang) * (h.radius + 6),
+            vx: Math.cos(ang) * ALIEN_BOLT_SPEED,
+            vy: Math.sin(ang) * ALIEN_BOLT_SPEED
+          });
+        }
+        continue; // stationary -- never collides with the ship or wraps around
       }
 
       if (dist2(h.x, h.y, ship.x, ship.y) < (h.radius + ship.radius * 0.8) ** 2) {
@@ -594,6 +721,10 @@
             endGame();
             return;
           }
+        } else if (h.kind === 'plasmaCloud') {
+          ship.debuffTimer = Math.max(ship.debuffTimer, PLASMA_DEBUFF_DURATION);
+          burst(h.x, h.y, '#7CFC9A', 26);
+          updateStatusHud();
         }
         screenShake = Math.max(screenShake, 0.35);
         hazards.splice(i, 1);
@@ -615,7 +746,7 @@
         const b = bullets[j];
         if (dist2(h.x, h.y, b.x, b.y) < (h.radius) ** 2) {
           bullets.splice(j, 1);
-          h.hp -= bulletDamage;
+          h.hp -= currentBulletDamage();
           burst(b.x, b.y, '#8bd0ff', 6);
           if (h.hp <= 0) {
             awardKill(h);
@@ -693,9 +824,60 @@
       ctx.stroke();
       ctx.restore();
     }
+
+    if (ship.debuffTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = clamp(ship.debuffTimer / PLASMA_DEBUFF_DURATION, 0, 1) * 0.5;
+      ctx.strokeStyle = '#7CFC9A';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(ship.x, ship.y, ship.radius + 24, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawPlasmaCloud(h) {
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = '#5CDB7A';
+    ctx.strokeStyle = '#2f7a45';
+    ctx.lineWidth = 1.5;
+    h.puffs.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.ox, p.oy, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function drawAlienTurret(h) {
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.fillStyle = '#4a2f7a';
+    ctx.strokeStyle = '#c9a6ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, h.radius, h.radius * 0.62, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#c9a6ff';
+    ctx.beginPath();
+    ctx.arc(0, -h.radius * 0.2, h.radius * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2a1a4a';
+    ctx.beginPath();
+    ctx.arc(0, -h.radius * 0.2, h.radius * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawHazard(h) {
+    if (h.kind === 'plasmaCloud') { drawPlasmaCloud(h); return; }
+    if (h.kind === 'alienTurret') { drawAlienTurret(h); return; }
     ctx.save();
     ctx.translate(h.x, h.y);
     ctx.rotate(h.rot);
@@ -751,6 +933,13 @@
       ctx.fill();
     });
 
+    ctx.fillStyle = '#c9a6ff';
+    enemyBullets.forEach(eb => {
+      ctx.beginPath();
+      ctx.arc(eb.x, eb.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
     particles.forEach(p => {
       const alpha = 1 - p.age / p.life;
       ctx.fillStyle = p.color;
@@ -781,8 +970,8 @@
   // initial idle scene
   upgrades = { fireRate: 0, damage: 0 };
   applyUpgradeEffects();
-  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, targetAngle: -Math.PI / 2, frozenTimer: 0, fireTimer: 0 };
-  bullets = []; hazards = []; particles = [];
+  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, targetAngle: -Math.PI / 2, frozenTimer: 0, debuffTimer: 0, fireTimer: 0 };
+  bullets = []; enemyBullets = []; hazards = []; particles = [];
   makeStars();
 
   const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
