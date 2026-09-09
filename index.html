@@ -25,11 +25,12 @@
 
   <div id="statusRow">
     <div id="frozenStatus" class="status-chip status-frozen hidden">FROZEN</div>
+    <div id="weakenedStatus" class="status-chip status-weakened hidden">WEAKENED</div>
   </div>
 
   <div id="startScreen" class="overlay">
     <h1>ASTEROID<br>DESTROYER</h1>
-    <p>Hold your finger on the screen to aim &amp; fire your turret. Move your finger to steer it.<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your turret. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none).<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
+    <p>Hold your finger on the screen to aim &amp; fire your turret. Move your finger to steer it.<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your turret. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none). <b>Plasma Clouds</b> weaken your fire rate and damage for a few seconds. <b>Alien Turrets</b> are stationary and shoot back &mdash; destroy them before they wear down your shields.<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
     <button id="startBtn">TAP TO START</button>
   </div>
 
@@ -48,13 +49,13 @@
         <span class="upgrade-name">Rate of Fire</span>
         <span class="upgrade-level" id="fireRateLevel">0/10</span>
         <span class="upgrade-desc">Fire faster</span>
-        <span class="upgrade-cost" id="fireRateCost">50</span>
+        <span class="upgrade-cost" id="fireRateCost">55</span>
       </button>
       <button class="upgrade-card" data-stat="damage">
         <span class="upgrade-name">Damage</span>
         <span class="upgrade-level" id="damageLevel">0/10</span>
         <span class="upgrade-desc">+1 damage per shot</span>
-        <span class="upgrade-cost" id="damageCost">40</span>
+        <span class="upgrade-cost" id="damageCost">45</span>
       </button>
     </div>
     <p id="upgradeMessage" class="hidden">Not enough gold!</p>
