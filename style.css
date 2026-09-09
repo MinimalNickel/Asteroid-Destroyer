@@ -146,6 +146,13 @@ html, body {
   transform: scale(0.96);
 }
 
+#waveBonus {
+  color: #8bf0a8;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: -8px;
+}
+
 #upgradeGold {
   color: #ffe27a;
   font-weight: 700;

@@ -12,13 +12,19 @@ Hazards and effects:
 - From wave 4 (comets) and wave 5 (meteors), rare **big** versions show up — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
 - Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually. Hazards also aim more aggressively at your ship than they used to.
 
+Gold is a run-only currency: you earn it by destroying hazards and clearing waves, and it's gone when the run ends, so every run stands on its own.
+
+- Kills pay out by hazard: Large Asteroid 3g, Medium 4g, Small 5g, Comet 7g, Meteor 9g, Big Comet 12g, Big Meteor 15g.
+- Clearing a wave pays a bonus of `5 + 2 × wave` gold, on top of kill gold — so surviving matters, not just shooting.
+- Take zero damage for the whole wave and the clear bonus gets a **Perfect Wave** +25% multiplier.
+
 Clear a wave and you can spend your gold on an upgrade before the next one starts:
 
-- **Shield** — blocks one asteroid hit (a meteor still wipes all your shields at once). Max 3. The first is cheap, the second moderate, the third expensive.
-- **Rate of Fire** — fire faster.
-- **Damage** — +1 damage per shot.
+- **Shield** — blocks one asteroid hit (a meteor still wipes all your shields at once). Max 3, costing 30g / 80g / 180g.
+- **Rate of Fire** — about 12% faster per level. Costs `50 + 30 × level` gold.
+- **Damage** — +1 damage per shot per level. Costs `40 + 25 × level` gold.
 
-Rate of Fire and Damage get more expensive the more you buy them. You can also skip an upgrade to save your gold for later.
+Rate of Fire and Damage each cap at level 10. You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
@@ -38,7 +44,7 @@ python3 -m http.server 8000
 ## Gameplay
 
 - No health bar — an unblocked hit ends the run. Shields (up to 3) are your only buffer.
-- Gold starts at 0, earned per kill (asteroids/comets/meteors are worth different amounts; bigger and tougher hazards pay more).
+- Gold starts at 0 each run, earned per kill and per wave clear (see the upgrade section above for exact amounts) and lost when the run ends.
 - Each wave spawns a fixed number of hazards (more each wave). Everything must be destroyed to clear it — nothing despawns by leaving the screen.
 - Comets appear from wave 2, meteors from wave 3.
 - Best score is saved locally on your device.
