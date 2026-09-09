@@ -654,6 +654,20 @@
       }
     }
 
+    // player bullets vs alien bolts -- shoot down incoming projectiles
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      for (let j = enemyBullets.length - 1; j >= 0; j--) {
+        const eb = enemyBullets[j];
+        if (dist2(b.x, b.y, eb.x, eb.y) < 8 ** 2) {
+          bullets.splice(i, 1);
+          enemyBullets.splice(j, 1);
+          burst(eb.x, eb.y, '#c9a6ff', 10);
+          break;
+        }
+      }
+    }
+
     // hazards: move + collide with ship
     for (let i = hazards.length - 1; i >= 0; i--) {
       const h = hazards[i];
