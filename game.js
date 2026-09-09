@@ -16,6 +16,7 @@
   const finalScoreEl = document.getElementById('finalScore');
   const bestScoreEl = document.getElementById('bestScore');
   const upgradeGoldEl = document.getElementById('upgradeGold');
+  const waveBonusEl = document.getElementById('waveBonus');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
 
   const BEST_KEY = 'asteroidDestroyer.best';
@@ -49,22 +50,31 @@
   let enemiesToSpawn = 0;
   let screenShake = 0;
   let isFiring = false;
+  let tookDamageThisWave = false;
   const MAX_SHIELDS = 3;
-  const SHIELD_COSTS = [30, 90, 250];
+  const SHIELD_COSTS = [30, 80, 180];
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
-  const UPGRADE_COST_BASE = 40;
-  const UPGRADE_COST_STEP = 25;
+  const MAX_UPGRADE_LEVEL = 10;
+  const DAMAGE_COST_BASE = 40;
+  const DAMAGE_COST_STEP = 25;
+  const FIRE_RATE_COST_BASE = 50;
+  const FIRE_RATE_COST_STEP = 30;
   let upgrades, fireCooldown, bulletDamage;
 
-  function upgradeCost(level) {
-    return UPGRADE_COST_BASE + level * UPGRADE_COST_STEP;
+  function upgradeCost(stat, level) {
+    if (stat === 'fireRate') return FIRE_RATE_COST_BASE + level * FIRE_RATE_COST_STEP;
+    return DAMAGE_COST_BASE + level * DAMAGE_COST_STEP;
   }
 
   function applyUpgradeEffects() {
     fireCooldown = Math.max(0.05, BASE_FIRE_COOLDOWN * Math.pow(0.88, upgrades.fireRate));
     bulletDamage = 1 + upgrades.damage;
+  }
+
+  function waveClearBonus(w) {
+    return 5 + w * 2;
   }
 
   function enemiesForWave(w) {
@@ -107,6 +117,7 @@
     spawnInterval = 1.6;
     enemiesToSpawn = enemiesForWave(wave);
     screenShake = 0;
+    tookDamageThisWave = false;
     updateHud();
     updateStatusHud();
     makeStars();
@@ -268,10 +279,10 @@
 
   function goldForHazard(h) {
     if (h.kind === 'asteroid') {
-      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 5 : 8;
+      return h.tier === 'large' ? 3 : h.tier === 'medium' ? 4 : 5;
     }
-    if (h.kind === 'comet') return h.big ? 15 : 8;
-    if (h.kind === 'meteor') return h.big ? 18 : 10;
+    if (h.kind === 'comet') return h.big ? 12 : 7;
+    if (h.kind === 'meteor') return h.big ? 15 : 9;
     return 3;
   }
 
@@ -391,7 +402,8 @@
         return;
       }
       const level = upgrades[stat];
-      const cost = upgradeCost(level);
+      if (level >= MAX_UPGRADE_LEVEL) return;
+      const cost = upgradeCost(stat, level);
       if (currency < cost) return;
       currency -= cost;
       upgrades[stat] += 1;
@@ -412,11 +424,16 @@
     upgradeGoldEl.textContent = 'Gold: ' + currency;
     ['fireRate', 'damage'].forEach(stat => {
       const level = upgrades[stat];
-      const cost = upgradeCost(level);
-      document.getElementById(stat + 'Level').textContent = 'Lv. ' + level;
-      document.getElementById(stat + 'Cost').textContent = cost;
       const card = upgradeCards.find(c => c.dataset.stat === stat);
-      card.classList.toggle('unaffordable', currency < cost);
+      document.getElementById(stat + 'Level').textContent = 'Lv. ' + level;
+      if (level >= MAX_UPGRADE_LEVEL) {
+        document.getElementById(stat + 'Cost').textContent = 'MAX';
+        card.classList.add('unaffordable');
+      } else {
+        const cost = upgradeCost(stat, level);
+        document.getElementById(stat + 'Cost').textContent = cost;
+        card.classList.toggle('unaffordable', currency < cost);
+      }
     });
     const shieldCard = upgradeCards.find(c => c.dataset.stat === 'shield');
     document.getElementById('shieldLevel').textContent = shields + '/' + MAX_SHIELDS;
@@ -432,6 +449,13 @@
 
   function showWaveClear() {
     state = STATE.UPGRADE;
+    const perfect = !tookDamageThisWave;
+    const bonus = Math.round(waveClearBonus(wave) * (perfect ? 1.25 : 1));
+    currency += bonus;
+    updateHud();
+    waveBonusEl.textContent = perfect
+      ? `+${bonus} gold — Perfect Wave bonus!`
+      : `+${bonus} gold (wave clear)`;
     updateUpgradeScreen();
     upgradeScreen.classList.remove('hidden');
   }
@@ -441,6 +465,7 @@
     enemiesToSpawn = enemiesForWave(wave);
     spawnInterval = Math.max(0.45, 1.6 - wave * 0.12);
     spawnTimer = 0;
+    tookDamageThisWave = false;
     updateHud();
     upgradeScreen.classList.add('hidden');
     state = STATE.PLAYING;
@@ -527,6 +552,7 @@
 
       if (dist2(h.x, h.y, ship.x, ship.y) < (h.radius + ship.radius * 0.8) ** 2) {
         if (h.kind === 'asteroid') {
+          tookDamageThisWave = true;
           if (shields > 0) {
             shields -= 1;
             burst(h.x, h.y, '#9fe3ff', 20);
@@ -542,6 +568,7 @@
           ship.frozenTimer = Math.max(ship.frozenTimer, h.big ? 4 : 2.5);
           burst(h.x, h.y, '#bfefff', h.big ? 34 : 24);
         } else if (h.kind === 'meteor') {
+          tookDamageThisWave = true;
           if (shields > 0) {
             shields = 0;
             burst(h.x, h.y, '#9fe3ff', 34);
