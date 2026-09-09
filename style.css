@@ -214,6 +214,17 @@ html, body {
   color: #ffe27a;
 }
 
+#upgradeMessage {
+  color: #ff8a8a;
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: -4px;
+}
+
+#upgradeMessage.hidden {
+  display: none;
+}
+
 #skipUpgradeBtn {
   margin-top: 0;
 }
