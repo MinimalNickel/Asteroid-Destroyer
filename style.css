@@ -118,6 +118,17 @@ html, body {
   display: none;
 }
 
+#victoryScreen h1 {
+  color: #ffe27a;
+  text-shadow: 0 0 22px rgba(255,226,122,0.7);
+}
+
+#victoryScore {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffe27a;
+}
+
 .overlay h1 {
   font-size: 34px;
   letter-spacing: 2px;

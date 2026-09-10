@@ -16,12 +16,18 @@
   const skipUpgradeBtn = document.getElementById('skipUpgradeBtn');
   const finalScoreEl = document.getElementById('finalScore');
   const bestScoreEl = document.getElementById('bestScore');
+  const bestWaveEl = document.getElementById('bestWave');
   const upgradeGoldEl = document.getElementById('upgradeGold');
   const waveBonusEl = document.getElementById('waveBonus');
   const upgradeMessageEl = document.getElementById('upgradeMessage');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
+  const victoryScreen = document.getElementById('victoryScreen');
+  const victoryScoreEl = document.getElementById('victoryScore');
+  const playAgainBtn = document.getElementById('playAgainBtn');
 
   const BEST_KEY = 'asteroidDestroyer.best';
+  const BEST_WAVE_KEY = 'asteroidDestroyer.bestWave';
+  const FINAL_WAVE = 99;
 
   let dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   let W = 0, H = 0;
@@ -43,7 +49,7 @@
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
   // ---- Game state ----
-  const STATE = { MENU: 'menu', PLAYING: 'playing', UPGRADE: 'upgrade', OVER: 'over' };
+  const STATE = { MENU: 'menu', PLAYING: 'playing', UPGRADE: 'upgrade', OVER: 'over', WON: 'won' };
   let state = STATE.MENU;
 
   let ship, bullets, hazards, particles, stars, enemyBullets;
@@ -54,7 +60,7 @@
   let isFiring = false;
   let tookDamageThisWave = false;
   const MAX_SHIELDS = 3;
-  const SHIELD_COSTS = [30, 80, 180];
+  const SHIELD_COSTS = [30, 90, 200];
 
   // ---- Plasma Cloud (green) -- debuffs the turret instead of costing a shield ----
   const PLASMA_DEBUFF_DURATION = 5;
@@ -73,15 +79,13 @@
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
   const MAX_UPGRADE_LEVEL = 10;
-  const DAMAGE_COST_BASE = 45;
-  const DAMAGE_COST_STEP = 30;
-  const FIRE_RATE_COST_BASE = 55;
-  const FIRE_RATE_COST_STEP = 35;
+  // Cost to buy level (index+1) of Damage or Fire Rate -- shared curve for both,
+  // steep enough that a player isn't fully maxed out until deep into a long run.
+  const UPGRADE_COSTS = [45, 75, 115, 165, 225, 295, 375, 465, 565, 685];
   let upgrades, fireCooldown, bulletDamage;
 
   function upgradeCost(stat, level) {
-    if (stat === 'fireRate') return FIRE_RATE_COST_BASE + level * FIRE_RATE_COST_STEP;
-    return DAMAGE_COST_BASE + level * DAMAGE_COST_STEP;
+    return UPGRADE_COSTS[level];
   }
 
   function applyUpgradeEffects() {
@@ -104,8 +108,15 @@
     return 5 + w * 2;
   }
 
+  // Grows with wave like before, but caps out so a very late wave doesn't
+  // balloon into an unplayable number of hazards to clear.
   function enemiesForWave(w) {
-    return 5 + w * 2;
+    return Math.min(5 + w * 2, 60);
+  }
+
+  // +2 HP every 10 waves: waves 1-10 get the base HP, 11-20 get +2, 21-30 +4, etc.
+  function hpForWave(baseHp, w) {
+    return baseHp + 2 * Math.floor((w - 1) / 10);
   }
 
   function makeStars() {
@@ -210,6 +221,11 @@
     return 70 + wave * 1.5;
   }
 
+  // Small asteroids scale like everything else, but capped so they never
+  // become tediously tanky -- their base HP of 1 would otherwise be the
+  // worst-scaling hazard in the game by wave 99.
+  const SMALL_ASTEROID_HP_CAP = 8;
+
   function spawnAsteroid(size = null, x = null, y = null) {
     const tier = size || 'large';
     const radiusMap = { large: rand(34, 44), medium: rand(20, 28), small: rand(11, 16) };
@@ -220,6 +236,9 @@
       sy = -radius - rand(0, 120);
     }
     const v = aimedVelocity(sx, sy, asteroidSpeed(tier), 0.15);
+    const baseHp = tier === 'large' ? 3 : tier === 'medium' ? 2 : 1;
+    let hp = hpForWave(baseHp, wave);
+    if (tier === 'small') hp = Math.min(hp, SMALL_ASTEROID_HP_CAP);
     hazards.push({
       kind: 'asteroid',
       x: sx, y: sy,
@@ -229,7 +248,7 @@
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-1.2, 1.2),
       shape: makeAsteroidShape(radius),
-      hp: tier === 'large' ? 3 : tier === 'medium' ? 2 : 1
+      hp
     });
   }
 
@@ -247,7 +266,7 @@
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-2, 2),
       shape: makeAsteroidShape(radius),
-      hp: big ? 5 : 2,
+      hp: hpForWave(big ? 5 : 2, wave),
       trailTimer: 0
     });
   }
@@ -266,7 +285,7 @@
       rot: rand(0, Math.PI * 2),
       rotSpeed: rand(-1.5, 1.5),
       shape: makeAsteroidShape(radius),
-      hp: big ? 6 : 2,
+      hp: hpForWave(big ? 6 : 2, wave),
       trailTimer: 0
     });
   }
@@ -290,7 +309,7 @@
       rot: 0,
       rotSpeed: 0,
       puffs,
-      hp: 3,
+      hp: hpForWave(3, wave),
       trailTimer: 0
     });
   }
@@ -307,12 +326,38 @@
       radius,
       rot: 0,
       rotSpeed: 0,
-      hp: ALIEN_TURRET_HP,
+      hp: hpForWave(ALIEN_TURRET_HP, wave),
       fireTimer: rand(0.5, 1.4),
       dir,
       phase: 'sweeping',
       pauseTimer: 0
     });
+  }
+
+  // Wave-gated spawn pool: which hazards can appear, and how often relative
+  // to each other, at a given wave. Asteroids-only for waves 1-2, comets join
+  // at wave 3, meteors at wave 5, plasma clouds at wave 8, alien turrets at
+  // wave 12 -- after which every hazard type is in the mix.
+  function availableSpawns(w) {
+    const pool = [{ fn: () => spawnAsteroid('large'), weight: 10 }];
+    if (w >= 3) pool.push({ fn: () => spawnComet(false), weight: 5 });
+    if (w >= 5) pool.push({ fn: () => spawnMeteor(false), weight: 4 });
+    if (w >= 5) pool.push({ fn: () => spawnComet(true), weight: 1.5 });
+    if (w >= 7) pool.push({ fn: () => spawnMeteor(true), weight: 1.2 });
+    if (w >= 8) pool.push({ fn: () => spawnPlasmaCloud(), weight: 3 });
+    if (w >= 12) pool.push({ fn: () => spawnAlienTurret(), weight: 2 });
+    return pool;
+  }
+
+  function spawnRandomHazard() {
+    const pool = availableSpawns(wave);
+    const total = pool.reduce((sum, p) => sum + p.weight, 0);
+    let roll = Math.random() * total;
+    for (const p of pool) {
+      roll -= p.weight;
+      if (roll <= 0) { p.fn(); return; }
+    }
+    pool[pool.length - 1].fn();
   }
 
   // Sends a paused (offscreen) alien turret back in from its entry edge to
@@ -489,6 +534,7 @@
 
   startBtn.addEventListener('click', startGame);
   retryBtn.addEventListener('click', startGame);
+  playAgainBtn.addEventListener('click', startGame);
   skipUpgradeBtn.addEventListener('click', startNextWave);
   function showUpgradeMessage(text) {
     upgradeMessageEl.textContent = text;
@@ -532,6 +578,7 @@
     startScreen.classList.add('hidden');
     upgradeScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
+    victoryScreen.classList.add('hidden');
   }
 
   function updateUpgradeScreen() {
@@ -578,7 +625,9 @@
   function startNextWave() {
     wave += 1;
     enemiesToSpawn = enemiesForWave(wave);
-    spawnInterval = Math.max(0.45, 1.6 - wave * 0.12);
+    // Ramps down gradually over a much longer stretch than before so hazards
+    // keep spawning faster well into a long run instead of maxing out by wave 10.
+    spawnInterval = Math.max(0.35, 1.6 - wave * 0.03);
     spawnTimer = 0;
     tookDamageThisWave = false;
     updateHud();
@@ -586,13 +635,31 @@
     state = STATE.PLAYING;
   }
 
-  function endGame() {
-    state = STATE.OVER;
+  function updateBests() {
     const best = Math.max(score, parseInt(localStorage.getItem(BEST_KEY) || '0', 10));
     try { localStorage.setItem(BEST_KEY, String(best)); } catch (e) {}
+    const bestWave = Math.max(wave, parseInt(localStorage.getItem(BEST_WAVE_KEY) || '0', 10));
+    try { localStorage.setItem(BEST_WAVE_KEY, String(bestWave)); } catch (e) {}
+    return { best, bestWave };
+  }
+
+  function endGame() {
+    state = STATE.OVER;
+    const { best, bestWave } = updateBests();
     finalScoreEl.textContent = 'Score: ' + score;
     bestScoreEl.textContent = 'Best: ' + best;
+    bestWaveEl.textContent = 'Best Wave: ' + bestWave;
     gameOverScreen.classList.remove('hidden');
+  }
+
+  // Wave 99 is the last one, but the player is never told that in advance --
+  // clearing it just quietly swaps the usual upgrade screen for a one-off
+  // victory screen instead.
+  function showVictory() {
+    state = STATE.WON;
+    updateBests();
+    victoryScoreEl.textContent = 'SCORE: ' + score;
+    victoryScreen.classList.remove('hidden');
   }
 
   // ---- Update ----
@@ -625,18 +692,15 @@
       spawnTimer -= dt;
       if (spawnTimer <= 0) {
         spawnTimer = spawnInterval;
-        const roll = Math.random();
-        if (wave >= 5 && roll < 0.04) spawnMeteor(true);
-        else if (wave >= 4 && roll < 0.09) spawnComet(true);
-        else if (wave >= 3 && roll < 0.24) spawnMeteor(false);
-        else if (wave >= 2 && roll < 0.41) spawnComet(false);
-        else if (wave >= 3 && roll < 0.50) spawnPlasmaCloud();
-        else if (wave >= 6 && roll < 0.56) spawnAlienTurret();
-        else spawnAsteroid('large');
+        spawnRandomHazard();
         enemiesToSpawn -= 1;
       }
     } else if (hazards.length === 0 && state === STATE.PLAYING) {
-      showWaveClear();
+      if (wave >= FINAL_WAVE) {
+        showVictory();
+      } else {
+        showWaveClear();
+      }
       return;
     }
 
@@ -1032,6 +1096,8 @@
 
   const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
   if (best > 0) bestScoreEl.textContent = 'Best: ' + best;
+  const bestWaveInit = parseInt(localStorage.getItem(BEST_WAVE_KEY) || '0', 10);
+  if (bestWaveInit > 0) bestWaveEl.textContent = 'Best Wave: ' + bestWaveInit;
 
   requestAnimationFrame(loop);
 })();
