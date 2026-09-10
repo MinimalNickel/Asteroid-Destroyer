@@ -10,9 +10,9 @@ Hazards and effects:
 - **Comets** (icy blue) freeze your turret for a few seconds if they reach you. They don't damage you or touch your shields.
 - **Meteors** (fiery orange) wipe out *all* your shields at once if they reach you, no matter how many you have — or kill you outright if you have none.
 - **Plasma Clouds** (green, from wave 3) don't cost a shield or freeze you — instead they weaken your turret, dropping fire rate and damage to 60% for 5 seconds.
-- **Alien Turrets** (purple, from wave 6) are stationary and don't drift toward you — instead they sit in place and shoot bolts at your ship (asteroid-style: costs a shield, or instant death with none left). You have to shoot back and destroy them; they take several hits and don't split.
+- **Alien Turrets** (purple, from wave 6) sweep left-to-right or right-to-left across the screen while shooting bolts at your ship (asteroid-style: costs a shield, or instant death with none left) — you can shoot their bolts down before they land. When a turret exits the screen it pauses offscreen for 15 seconds before sweeping back in from the same side; if it's the only hazard left, it skips the pause and loops continuously so you're never left waiting. You have to shoot the turret itself to destroy it; it takes several hits and doesn't split.
 - From wave 4 (comets) and wave 5 (meteors), rare **big** versions show up — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
-- Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually (alien turrets never leave in the first place). Hazards also aim more aggressively at your ship than they used to.
+- Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually (alien turrets manage their own offscreen pause/re-entry instead). Hazards also aim more aggressively at your ship than they used to.
 
 Gold is a run-only currency: you earn it by destroying hazards and clearing waves, and it's gone when the run ends, so every run stands on its own.
 
