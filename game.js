@@ -60,10 +60,15 @@
   const PLASMA_DEBUFF_DURATION = 5;
   const PLASMA_DEBUFF_FACTOR = 0.6; // fire rate & damage drop to 60% while weakened
 
-  // ---- Alien Turret -- stationary, shoots back, must be destroyed by the player ----
+  // ---- Alien Turret -- sweeps across the screen shooting back, must be
+  // destroyed by the player. Exits one edge, pauses offscreen, then re-enters
+  // and sweeps again -- unless it's the only hazard left, in which case it
+  // loops continuously with no pause so the player is never left waiting.
   const ALIEN_TURRET_HP = 6;
   const ALIEN_TURRET_RADIUS = 30;
+  const ALIEN_TURRET_PAUSE_DURATION = 15;
   const ALIEN_BOLT_SPEED = 260;
+  const ALIEN_BOLT_RADIUS = 9;
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
@@ -201,6 +206,10 @@
     return Math.max(0.9, 1.8 - wave * 0.03);
   }
 
+  function alienTurretMoveSpeed() {
+    return 70 + wave * 1.5;
+  }
+
   function spawnAsteroid(size = null, x = null, y = null) {
     const tier = size || 'large';
     const radiusMap = { large: rand(34, 44), medium: rand(20, 28), small: rand(11, 16) };
@@ -288,23 +297,37 @@
 
   function spawnAlienTurret() {
     const radius = ALIEN_TURRET_RADIUS;
-    const sx = rand(radius + 20, W - radius - 20);
+    const dir = Math.random() < 0.5 ? 1 : -1;
     const sy = rand(H * 0.12, H * 0.32);
+    const sx = dir === 1 ? -radius - 10 : W + radius + 10;
     hazards.push({
       kind: 'alienTurret',
       x: sx, y: sy,
-      vx: 0, vy: 0,
+      vx: dir * alienTurretMoveSpeed(), vy: 0,
       radius,
       rot: 0,
       rotSpeed: 0,
       hp: ALIEN_TURRET_HP,
-      fireTimer: rand(0.5, 1.4)
+      fireTimer: rand(0.5, 1.4),
+      dir,
+      phase: 'sweeping',
+      pauseTimer: 0
     });
+  }
+
+  // Sends a paused (offscreen) alien turret back in from its entry edge to
+  // sweep across again, in the same left-to-right or right-to-left direction
+  // it started with.
+  function resumeAlienSweep(h) {
+    h.phase = 'sweeping';
+    h.x = h.dir === 1 ? -h.radius - 10 : W + h.radius + 10;
+    h.vx = h.dir * alienTurretMoveSpeed();
+    h.fireTimer = rand(0.4, 1.0);
   }
 
   // A hazard that drifts off any edge loops back in from the top instead of
   // despawning -- nothing escapes, everything has to be destroyed.
-  // (Alien turrets never move, so they never reach this.)
+  // (Alien turrets manage their own offscreen pause/re-entry and never reach this.)
   function respawnAtTop(h) {
     h.x = rand(h.radius, W - h.radius);
     h.y = -h.radius - rand(0, 80);
@@ -637,7 +660,7 @@
         enemyBullets.splice(i, 1);
         continue;
       }
-      if (dist2(eb.x, eb.y, ship.x, ship.y) < (ship.radius * 0.7) ** 2) {
+      if (dist2(eb.x, eb.y, ship.x, ship.y) < (ship.radius * 0.7 + ALIEN_BOLT_RADIUS) ** 2) {
         enemyBullets.splice(i, 1);
         tookDamageThisWave = true;
         if (shields > 0) {
@@ -659,7 +682,7 @@
       const b = bullets[i];
       for (let j = enemyBullets.length - 1; j >= 0; j--) {
         const eb = enemyBullets[j];
-        if (dist2(b.x, b.y, eb.x, eb.y) < 8 ** 2) {
+        if (dist2(b.x, b.y, eb.x, eb.y) < (ALIEN_BOLT_RADIUS + 3.5) ** 2) {
           bullets.splice(i, 1);
           enemyBullets.splice(j, 1);
           burst(eb.x, eb.y, '#c9a6ff', 10);
@@ -691,18 +714,34 @@
       }
 
       if (h.kind === 'alienTurret') {
-        h.fireTimer -= dt;
-        if (h.fireTimer <= 0) {
-          h.fireTimer = alienFireInterval();
-          const ang = Math.atan2(ship.y - h.y, ship.x - h.x);
-          enemyBullets.push({
-            x: h.x + Math.cos(ang) * (h.radius + 6),
-            y: h.y + Math.sin(ang) * (h.radius + 6),
-            vx: Math.cos(ang) * ALIEN_BOLT_SPEED,
-            vy: Math.sin(ang) * ALIEN_BOLT_SPEED
-          });
+        if (h.phase === 'sweeping') {
+          h.fireTimer -= dt;
+          if (h.fireTimer <= 0) {
+            h.fireTimer = alienFireInterval();
+            const ang = Math.atan2(ship.y - h.y, ship.x - h.x);
+            enemyBullets.push({
+              x: h.x + Math.cos(ang) * (h.radius + 6),
+              y: h.y + Math.sin(ang) * (h.radius + 6),
+              vx: Math.cos(ang) * ALIEN_BOLT_SPEED,
+              vy: Math.sin(ang) * ALIEN_BOLT_SPEED
+            });
+          }
+          if (h.x < -h.radius - 20 || h.x > W + h.radius + 20) {
+            h.phase = 'paused';
+            h.vx = 0;
+            h.pauseTimer = ALIEN_TURRET_PAUSE_DURATION;
+          }
+        } else {
+          // Nothing else left to shoot at -- skip the pause and keep looping.
+          const alone = hazards.length === 1;
+          if (alone) {
+            resumeAlienSweep(h);
+          } else {
+            h.pauseTimer -= dt;
+            if (h.pauseTimer <= 0) resumeAlienSweep(h);
+          }
         }
-        continue; // stationary -- never collides with the ship or wraps around
+        continue; // never collides with the ship, and never wraps like other hazards
       }
 
       if (dist2(h.x, h.y, ship.x, ship.y) < (h.radius + ship.radius * 0.8) ** 2) {
@@ -947,11 +986,14 @@
       ctx.fill();
     });
 
-    ctx.fillStyle = '#c9a6ff';
     enemyBullets.forEach(eb => {
+      ctx.fillStyle = '#c9a6ff';
       ctx.beginPath();
-      ctx.arc(eb.x, eb.y, 4, 0, Math.PI * 2);
+      ctx.arc(eb.x, eb.y, ALIEN_BOLT_RADIUS, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#f0e0ff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     });
 
     particles.forEach(p => {
