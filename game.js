@@ -466,6 +466,88 @@
     });
   }
 
+  // ---- Audio (all synthesized -- no sound files, no dependencies) ----
+  let audioCtx = null;
+
+  // Browsers refuse to start/resume an AudioContext without a user gesture,
+  // so this is only ever called from a button click (startGame).
+  function ensureAudio() {
+    try {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      } else if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  function playTone({ freq, endFreq = freq, type = 'sine', duration = 0.15, volume = 0.15, attack = 0.005, delay = 0 }) {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime + delay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (endFreq !== freq) osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), t0 + duration);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(volume, t0 + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  function playNoise({ duration = 0.2, volume = 0.15, filterType = 'lowpass', filterFreq = 800, filterQ = 1, delay = 0 }) {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime + delay;
+    const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = filterType;
+    filter.frequency.value = filterFreq;
+    filter.Q.value = filterQ;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(volume, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    noise.connect(filter).connect(gain).connect(audioCtx.destination);
+    noise.start(t0);
+    noise.stop(t0 + duration + 0.02);
+  }
+
+  // Quick descending laser blip -- fired a lot, so kept short and cheap.
+  function sfxLaser() {
+    playTone({ freq: 1100, endFreq: 320, type: 'square', duration: 0.09, volume: 0.08, attack: 0.002 });
+  }
+
+  // Icy shimmer for a comet freezing the turret.
+  function sfxFreeze() {
+    playTone({ freq: 1800, endFreq: 2400, type: 'sine', duration: 0.4, volume: 0.16, attack: 0.01 });
+    playTone({ freq: 2300, endFreq: 3000, type: 'sine', duration: 0.5, volume: 0.1, attack: 0.02, delay: 0.03 });
+  }
+
+  // Sci-fi warble for the alien turret's bolt launch.
+  function sfxAlienZap() {
+    playTone({ freq: 520, endFreq: 950, type: 'sawtooth', duration: 0.1, volume: 0.11, attack: 0.004 });
+    playTone({ freq: 900, endFreq: 240, type: 'sawtooth', duration: 0.14, volume: 0.09, attack: 0.01, delay: 0.05 });
+  }
+
+  // Gassy hiss for a Plasma Cloud hit.
+  function sfxGassyHiss() {
+    playNoise({ duration: 0.5, volume: 0.14, filterType: 'bandpass', filterFreq: 700, filterQ: 0.7 });
+    playTone({ freq: 180, endFreq: 90, type: 'sine', duration: 0.4, volume: 0.07, attack: 0.02 });
+  }
+
+  // Fiery crackle + thud for a meteor impact.
+  function sfxMeteorHit() {
+    playNoise({ duration: 0.25, volume: 0.2, filterType: 'lowpass', filterFreq: 2200, filterQ: 0.5 });
+    playTone({ freq: 150, endFreq: 45, type: 'sawtooth', duration: 0.3, volume: 0.18, attack: 0.004 });
+  }
+
   // ---- Input ----
   function aimAt(px, py) {
     let ang = Math.atan2(py - ship.y, px - ship.x);
@@ -488,6 +570,7 @@
       vy: Math.sin(ship.angle) * speed,
       life: 1.4
     });
+    sfxLaser();
     if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
   }
 
@@ -573,6 +656,7 @@
   });
 
   function startGame() {
+    ensureAudio();
     resetGame();
     state = STATE.PLAYING;
     startScreen.classList.add('hidden');
@@ -789,6 +873,7 @@
               vx: Math.cos(ang) * ALIEN_BOLT_SPEED,
               vy: Math.sin(ang) * ALIEN_BOLT_SPEED
             });
+            sfxAlienZap();
           }
           if (h.x < -h.radius - 20 || h.x > W + h.radius + 20) {
             h.phase = 'paused';
@@ -825,8 +910,10 @@
         } else if (h.kind === 'comet') {
           ship.frozenTimer = Math.max(ship.frozenTimer, h.big ? 4 : 2.5);
           burst(h.x, h.y, '#bfefff', h.big ? 34 : 24);
+          sfxFreeze();
         } else if (h.kind === 'meteor') {
           tookDamageThisWave = true;
+          sfxMeteorHit();
           if (shields > 0) {
             shields = 0;
             burst(h.x, h.y, '#9fe3ff', 34);
@@ -842,6 +929,7 @@
           ship.debuffTimer = Math.max(ship.debuffTimer, PLASMA_DEBUFF_DURATION);
           burst(h.x, h.y, '#7CFC9A', 26);
           updateStatusHud();
+          sfxGassyHiss();
         }
         screenShake = Math.max(screenShake, 0.35);
         hazards.splice(i, 1);
