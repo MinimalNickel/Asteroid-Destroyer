@@ -54,8 +54,12 @@ python3 -m http.server 8000
 - The run has a final wave, but the game never tells you in advance — it plays like an endless high-score climb. Clearing it swaps the usual wave-clear screen for a one-off victory screen with your final score, and "Play Again" starts a fresh run.
 - Best score and best wave reached are both saved locally on your device.
 
+## Sound
+
+All sound effects are synthesized at runtime with the Web Audio API — no audio files, no dependencies. The AudioContext is created the moment you tap "Tap to Start" (browsers require a user gesture before audio can play). Effects: a laser blip when you fire, an icy shimmer when a comet freezes you, a sci-fi warble when an Alien Turret fires its bolt, a gassy hiss when a Plasma Cloud hits you, and a fiery crackle/thud when a meteor hits you.
+
 ## Files
 
 - `index.html` — page structure, HUD, and overlay markup (start, wave-clear upgrades, game over)
 - `style.css` — mobile-first styling, safe-area aware HUD, shield pips, and upgrade cards
-- `game.js` — game loop, hazards, upgrades, input handling, rendering
+- `game.js` — game loop, hazards, upgrades, input handling, rendering, synthesized sound effects
