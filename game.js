@@ -114,9 +114,9 @@
     return Math.min(5 + w * 2, 60);
   }
 
-  // +2 HP every 10 waves: waves 1-10 get the base HP, 11-20 get +2, 21-30 +4, etc.
+  // +2 HP every 5 waves: waves 1-5 get the base HP, 6-10 get +2, 11-15 +4, etc.
   function hpForWave(baseHp, w) {
-    return baseHp + 2 * Math.floor((w - 1) / 10);
+    return baseHp + 2 * Math.floor((w - 1) / 5);
   }
 
   function makeStars() {
@@ -470,13 +470,18 @@
   let audioCtx = null;
 
   // Browsers refuse to start/resume an AudioContext without a user gesture,
-  // so this is only ever called from a button click (startGame).
+  // so this is only ever called from a button click (startGame). Many mobile
+  // browsers (iOS Safari especially) still hand back a freshly-created
+  // context in the 'suspended' state even from inside that gesture, so it's
+  // not enough to resume() only on reuse -- a brand-new context needs it too,
+  // or every sound is silently dropped for the whole first playthrough.
   function ensureAudio() {
     try {
       if (!audioCtx) {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (Ctx) audioCtx = new Ctx();
-      } else if (audioCtx.state === 'suspended') {
+      }
+      if (audioCtx && audioCtx.state !== 'running') {
         audioCtx.resume().catch(() => {});
       }
     } catch (e) {}
@@ -484,6 +489,7 @@
 
   function playTone({ freq, endFreq = freq, type = 'sine', duration = 0.15, volume = 0.15, attack = 0.005, delay = 0 }) {
     if (!audioCtx) return;
+    if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
     const t0 = audioCtx.currentTime + delay;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -500,6 +506,7 @@
 
   function playNoise({ duration = 0.2, volume = 0.15, filterType = 'lowpass', filterFreq = 800, filterQ = 1, delay = 0 }) {
     if (!audioCtx) return;
+    if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
     const t0 = audioCtx.currentTime + delay;
     const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
@@ -577,6 +584,9 @@
   function startFiring(clientX, clientY) {
     if (state !== STATE.PLAYING) return;
     isFiring = true;
+    // Re-resume defensively -- mobile browsers can suspend the AudioContext
+    // again after the tab is backgrounded, so every tap re-checks it.
+    ensureAudio();
     if (ship.frozenTimer <= 0) aimAt(clientX, clientY);
   }
 
