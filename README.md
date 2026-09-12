@@ -8,13 +8,14 @@ Hazards and effects:
 
 - **Asteroids** split into smaller, faster pieces when hit. Reaching your ship consumes one shield — with no shields left, it's instant death.
 - **Comets** (icy blue) freeze your turret for a few seconds if they reach you. They don't damage you or touch your shields.
-- **Meteors** (fiery orange) wipe out *all* your shields at once if they reach you, no matter how many you have — or kill you outright if you have none.
+- **Meteors** (fiery orange) wipe out your first 3 shields at once if they reach you — but your 4th and 5th shields are meteor-resistant and only lose one at a time, so a meteor only fully wipes you out once you're back down to the "normal" 3. With no shields left, a meteor is instant death. Because they're already this dangerous, meteors are kept spaced out: at least ~4 seconds real time between arrivals, so you never get two back-to-back with no time to recover.
 - **Plasma Clouds** (green, from wave 3) don't cost a shield or freeze you — instead they weaken your turret, dropping fire rate and damage to 60% for 5 seconds.
 - **Alien Turrets** (purple, from wave 6) sweep left-to-right or right-to-left across the screen while shooting bolts at your ship (asteroid-style: costs a shield, or instant death with none left) — you can shoot their bolts down before they land. When a turret exits the screen it pauses offscreen for 15 seconds before sweeping back in from the same side; if it's the only hazard left, it skips the pause and loops continuously so you're never left waiting. You have to shoot the turret itself to destroy it; it takes several hits and doesn't split.
 - Rare **big** comet/meteor versions show up a couple of waves after their normal counterpart — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
 - Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually (alien turrets manage their own offscreen pause/re-entry instead). Hazards also aim more aggressively at your ship than they used to.
-- Hazard HP scales with wave: every enemy's HP goes up by +2 every 5 waves (`baseHP + 2 × floor((wave-1)/5)`), so waves 1-5 are base HP, 6-10 are +2, 11-15 are +4, and so on through wave 99. Small asteroids are exempt from most of this climb — their HP is capped at 8 so they never become a tedious bullet sponge.
-- Both how many hazards a wave throws at you and how often they spawn ramp up gradually as the run goes on, on top of the HP scaling.
+- Hazard HP scales with wave: every enemy's HP goes up by +1 every 5 waves (`baseHP + floor((wave-1)/5)`), so waves 1-5 are base HP, 6-10 are +1, 11-15 are +2, and so on through wave 99. Small Asteroids are capped at 7 HP and Plasma Clouds at 14 HP so neither becomes a tedious bullet sponge late-game — Plasma Clouds especially are meant to be a debuff threat, not a tank.
+- At most 8 hazards can be alive on screen at once. Since nothing here despawns by leaving the screen, an uncapped screen would let a brief kill-rate shortfall snowball into a permanent, unrecoverable backlog for the rest of the wave — this ceiling keeps every wave theoretically clearable no matter how far the run has gone. Late-game difficulty instead comes from juggling multiple hazard *types* at once (asteroids + Alien Turret bolts + Plasma Clouds + Meteors together), not from the screen just filling up faster than you can shoot.
+- How often hazards spawn ramps up gradually as the run goes on, on top of the HP scaling — though the spawn rate never gets faster than one every 0.52 seconds, so even the latest waves stay theoretically manageable.
 
 Gold is a run-only currency: you earn it by destroying hazards and clearing waves, and it's gone when the run ends, so every run stands on its own.
 
@@ -24,11 +25,11 @@ Gold is a run-only currency: you earn it by destroying hazards and clearing wave
 
 Clear a wave and you can spend your gold on an upgrade before the next one starts:
 
-- **Shield** — blocks one asteroid or alien-turret hit (a meteor still wipes all your shields at once). Max 3, costing 30g / 90g / 200g.
+- **Shield** — blocks one asteroid or alien-turret hit. Max 5, costing 30g / 90g / 200g / 350g / 550g. The first 3 are wiped out entirely by a single meteor; the last 2 are meteor-resistant and only lose one at a time.
 - **Rate of Fire** — about 12% faster per level.
 - **Damage** — +1 damage per shot per level.
 
-Rate of Fire and Damage share the same steep cost curve (both cap at level 10): 45, 75, 115, 165, 225, 295, 375, 465, 565, 685 gold for levels 1-10. It's intentionally a long grind — a thorough player shouldn't be fully maxed out until well into a long run, not by wave 20. You can also skip an upgrade to save your gold for later.
+Rate of Fire and Damage share the same very steep cost curve (both cap at level 15): 50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870, 15800, 25300, 40500 gold for levels 1-15 — each level costs roughly 1.6x the last. It's a deliberately long grind: a thorough player is still chasing the mid-teens levels around wave 70-90, and the last 3 levels (13-15) are more of an aspirational stretch goal than something most runs will finish. You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
@@ -47,7 +48,7 @@ python3 -m http.server 8000
 
 ## Gameplay
 
-- No health bar — an unblocked hit ends the run. Shields (up to 3) are your only buffer.
+- No health bar — an unblocked hit ends the run. Shields (up to 5) are your only buffer.
 - Gold starts at 0 each run, earned per kill and per wave clear (see the upgrade section above for exact amounts) and lost when the run ends.
 - Each wave spawns a growing number of hazards (capped at 60 per wave so the late game stays playable). Everything must be destroyed to clear it — nothing despawns by leaving the screen.
 - New hazard types unlock gradually: waves 1-2 are asteroids only, comets join at wave 3, meteors at wave 5, Plasma Clouds at wave 8, and Alien Turrets at wave 12 — after wave 12 every hazard type can appear. Big comet/meteor variants unlock a couple of waves after their base type.

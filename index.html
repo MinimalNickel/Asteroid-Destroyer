@@ -17,6 +17,8 @@
       <div class="shield-pip" data-index="0"></div>
       <div class="shield-pip" data-index="1"></div>
       <div class="shield-pip" data-index="2"></div>
+      <div class="shield-pip resistant" data-index="3"></div>
+      <div class="shield-pip resistant" data-index="4"></div>
     </div>
     <div id="currencyLabel">Gold: 0</div>
     <div id="scoreLabel">Score: 0</div>
@@ -30,7 +32,7 @@
 
   <div id="startScreen" class="overlay">
     <h1>ASTEROID<br>DESTROYER</h1>
-    <p>Hold your finger on the screen to aim &amp; fire your turret. Move your finger to steer it.<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your turret. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none). <b>Plasma Clouds</b> weaken your fire rate and damage for a few seconds. <b>Alien Turrets</b> sweep across the screen shooting bolts at you &mdash; you can shoot the bolts down, but the turret itself takes several hits to destroy.<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
+    <p>Hold your finger on the screen to aim &amp; fire your turret. Move your finger to steer it.<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your turret. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none) &mdash; except your last two shields, which are meteor-resistant and only lose one at a time. <b>Plasma Clouds</b> weaken your fire rate and damage for a few seconds. <b>Alien Turrets</b> sweep across the screen shooting bolts at you &mdash; you can shoot the bolts down, but the turret itself takes several hits to destroy.<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
     <button id="startBtn">TAP TO START</button>
   </div>
 
@@ -41,21 +43,21 @@
     <div id="upgradeCards">
       <button class="upgrade-card" data-stat="shield">
         <span class="upgrade-name">Shield</span>
-        <span class="upgrade-level" id="shieldLevel">0/3</span>
-        <span class="upgrade-desc">Blocks one hit. A meteor wipes all your shields at once.</span>
+        <span class="upgrade-level" id="shieldLevel">0/5</span>
+        <span class="upgrade-desc">Blocks one hit. A meteor wipes your first 3 shields at once, but your last 2 are meteor-resistant and only lose one at a time.</span>
         <span class="upgrade-cost" id="shieldCost">30</span>
       </button>
       <button class="upgrade-card" data-stat="fireRate">
         <span class="upgrade-name">Rate of Fire</span>
-        <span class="upgrade-level" id="fireRateLevel">0/10</span>
+        <span class="upgrade-level" id="fireRateLevel">0/15</span>
         <span class="upgrade-desc">Fire faster</span>
-        <span class="upgrade-cost" id="fireRateCost">45</span>
+        <span class="upgrade-cost" id="fireRateCost">50</span>
       </button>
       <button class="upgrade-card" data-stat="damage">
         <span class="upgrade-name">Damage</span>
-        <span class="upgrade-level" id="damageLevel">0/10</span>
+        <span class="upgrade-level" id="damageLevel">0/15</span>
         <span class="upgrade-desc">+1 damage per shot</span>
-        <span class="upgrade-cost" id="damageCost">45</span>
+        <span class="upgrade-cost" id="damageCost">50</span>
       </button>
     </div>
     <p id="upgradeMessage" class="hidden">Not enough gold!</p>
