@@ -59,8 +59,13 @@
   let screenShake = 0;
   let isFiring = false;
   let tookDamageThisWave = false;
-  const MAX_SHIELDS = 3;
-  const SHIELD_COSTS = [30, 90, 200];
+  const MAX_SHIELDS = 5;
+  const SHIELD_COSTS = [30, 90, 200, 350, 550];
+  // The last 2 shields (4th and 5th) are meteor-resistant: while one is up,
+  // a meteor only pops that single shield instead of wiping everything.
+  // Only once you're back down to the first 3 "normal" shields does a
+  // meteor go back to wiping them all at once.
+  const METEOR_RESISTANT_THRESHOLD = MAX_SHIELDS - 2;
 
   // ---- Plasma Cloud (green) -- debuffs the turret instead of costing a shield ----
   const PLASMA_DEBUFF_DURATION = 5;
@@ -956,7 +961,10 @@
         } else if (h.kind === 'meteor') {
           tookDamageThisWave = true;
           sfxMeteorHit();
-          if (shields > 0) {
+          if (shields > METEOR_RESISTANT_THRESHOLD) {
+            shields -= 1;
+            burst(h.x, h.y, '#9fe3ff', 34);
+          } else if (shields > 0) {
             shields = 0;
             burst(h.x, h.y, '#9fe3ff', 34);
           } else {
