@@ -79,7 +79,7 @@
   const ALIEN_TURRET_RADIUS = 30;
   const ALIEN_TURRET_PAUSE_DURATION = 15;
   const ALIEN_BOLT_SPEED = 260;
-  const ALIEN_BOLT_RADIUS = 9;
+  const ALIEN_BOLT_RADIUS = 13;
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
@@ -740,6 +740,11 @@
 
   function showWaveClear() {
     state = STATE.UPGRADE;
+    // An Alien Turret's bolts can still be in flight the instant its wave
+    // clears (you killed the turret but not every bolt it already fired) --
+    // without this they'd carry over and could hit you the moment the next
+    // wave starts, before you've even seen anything spawn.
+    enemyBullets.length = 0;
     const perfect = !tookDamageThisWave;
     const bonus = Math.round(waveClearBonus(wave) * (perfect ? 1.25 : 1));
     currency += bonus;
