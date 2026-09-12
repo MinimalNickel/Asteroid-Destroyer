@@ -21,6 +21,8 @@
   const waveBonusEl = document.getElementById('waveBonus');
   const upgradeMessageEl = document.getElementById('upgradeMessage');
   const upgradeCards = Array.from(document.querySelectorAll('.upgrade-card'));
+  const shieldNameEl = document.getElementById('shieldName');
+  const shieldDescEl = document.getElementById('shieldDesc');
   const victoryScreen = document.getElementById('victoryScreen');
   const victoryScoreEl = document.getElementById('victoryScore');
   const playAgainBtn = document.getElementById('playAgainBtn');
@@ -59,13 +61,15 @@
   let screenShake = 0;
   let isFiring = false;
   let tookDamageThisWave = false;
-  const MAX_SHIELDS = 5;
-  const SHIELD_COSTS = [30, 90, 200, 350, 550];
-  // The last 2 shields (4th and 5th) are meteor-resistant: while one is up,
-  // a meteor only pops that single shield instead of wiping everything.
-  // Only once you're back down to the first 3 "normal" shields does a
-  // meteor go back to wiping them all at once.
-  const METEOR_RESISTANT_THRESHOLD = MAX_SHIELDS - 2;
+  const MAX_SHIELDS = 3;
+  const SHIELD_COSTS = [30, 90, 200];
+  // Once all 3 shields are bought, the Shield upgrade card switches over to
+  // offering a Meteor Shield upgrade instead: converting one of your existing
+  // shields so it survives a meteor hit (absorbing just that one shield)
+  // rather than being wiped out along with the rest. Purchased in order, so
+  // meteorUpgrades counts up from 0 to MAX_SHIELDS.
+  const METEOR_UPGRADE_COSTS = [350, 550, 850];
+  let meteorUpgrades = 0;
 
   // ---- Plasma Cloud (green) -- debuffs the turret instead of costing a shield ----
   const PLASMA_DEBUFF_DURATION = 5;
@@ -154,6 +158,7 @@
     upgrades = { fireRate: 0, damage: 0 };
     applyUpgradeEffects();
     shields = 0;
+    meteorUpgrades = 0;
     ship = {
       x: W / 2,
       y: H - 90,
@@ -183,7 +188,10 @@
   }
 
   function updateHud() {
-    shieldPips.forEach((el, i) => el.classList.toggle('filled', i < shields));
+    shieldPips.forEach((el, i) => {
+      el.classList.toggle('filled', i < shields);
+      el.classList.toggle('resistant', i >= MAX_SHIELDS - meteorUpgrades);
+    });
     currencyLabelEl.textContent = 'Gold: ' + currency;
     scoreLabelEl.textContent = 'Score: ' + score;
     waveLabelEl.textContent = 'Wave ' + wave;
@@ -366,12 +374,12 @@
   // at once, not from meteors alone getting more common too.
   function availableSpawns(w) {
     const pool = [{ kind: 'asteroid', fn: () => spawnAsteroid('large'), weight: 10 }];
-    if (w >= 3) pool.push({ kind: 'comet', fn: () => spawnComet(false), weight: 5 });
-    if (w >= 5) pool.push({ kind: 'meteor', fn: () => spawnMeteor(false), weight: 3 });
-    if (w >= 5) pool.push({ kind: 'comet', fn: () => spawnComet(true), weight: 1.5 });
-    if (w >= 7) pool.push({ kind: 'meteor', fn: () => spawnMeteor(true), weight: 0.8 });
-    if (w >= 8) pool.push({ kind: 'plasmaCloud', fn: () => spawnPlasmaCloud(), weight: 3 });
-    if (w >= 12) pool.push({ kind: 'alienTurret', fn: () => spawnAlienTurret(), weight: 2 });
+    if (w >= 4) pool.push({ kind: 'comet', fn: () => spawnComet(false), weight: 5 });
+    if (w >= 6) pool.push({ kind: 'comet', fn: () => spawnComet(true), weight: 1.5 });
+    if (w >= 8) pool.push({ kind: 'meteor', fn: () => spawnMeteor(false), weight: 3 });
+    if (w >= 10) pool.push({ kind: 'meteor', fn: () => spawnMeteor(true), weight: 0.8 });
+    if (w >= 12) pool.push({ kind: 'plasmaCloud', fn: () => spawnPlasmaCloud(), weight: 3 });
+    if (w >= 16) pool.push({ kind: 'alienTurret', fn: () => spawnAlienTurret(), weight: 2 });
     return pool;
   }
 
@@ -678,11 +686,19 @@
     card.addEventListener('click', () => {
       const stat = card.dataset.stat;
       if (stat === 'shield') {
-        if (shields >= MAX_SHIELDS) return;
-        const cost = SHIELD_COSTS[shields];
-        if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
-        currency -= cost;
-        shields += 1;
+        if (shields < MAX_SHIELDS) {
+          const cost = SHIELD_COSTS[shields];
+          if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
+          currency -= cost;
+          shields += 1;
+        } else if (meteorUpgrades < MAX_SHIELDS) {
+          const cost = METEOR_UPGRADE_COSTS[meteorUpgrades];
+          if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
+          currency -= cost;
+          meteorUpgrades += 1;
+        } else {
+          return;
+        }
         clearUpgradeMessage();
         updateHud();
         updateUpgradeScreen();
@@ -727,14 +743,25 @@
       }
     });
     const shieldCard = upgradeCards.find(c => c.dataset.stat === 'shield');
-    document.getElementById('shieldLevel').textContent = shields + '/' + MAX_SHIELDS;
-    if (shields >= MAX_SHIELDS) {
-      document.getElementById('shieldCost').textContent = 'MAX';
-      shieldCard.classList.add('unaffordable');
-    } else {
+    if (shields < MAX_SHIELDS) {
+      shieldNameEl.textContent = 'Shield';
+      shieldDescEl.textContent = 'Blocks one hit. A meteor wipes out all your shields at once.';
+      document.getElementById('shieldLevel').textContent = shields + '/' + MAX_SHIELDS;
       const cost = SHIELD_COSTS[shields];
       document.getElementById('shieldCost').textContent = cost;
       shieldCard.classList.toggle('unaffordable', currency < cost);
+    } else {
+      shieldNameEl.textContent = 'Meteor Shield';
+      shieldDescEl.textContent = 'Upgrade a shield to survive a meteor -- it absorbs one meteor hit instead of being wiped out with the rest.';
+      document.getElementById('shieldLevel').textContent = meteorUpgrades + '/' + MAX_SHIELDS;
+      if (meteorUpgrades >= MAX_SHIELDS) {
+        document.getElementById('shieldCost').textContent = 'MAX';
+        shieldCard.classList.add('unaffordable');
+      } else {
+        const cost = METEOR_UPGRADE_COSTS[meteorUpgrades];
+        document.getElementById('shieldCost').textContent = cost;
+        shieldCard.classList.toggle('unaffordable', currency < cost);
+      }
     }
   }
 
@@ -968,7 +995,7 @@
         } else if (h.kind === 'meteor') {
           tookDamageThisWave = true;
           sfxMeteorHit();
-          if (shields > METEOR_RESISTANT_THRESHOLD) {
+          if (shields > MAX_SHIELDS - meteorUpgrades) {
             shields -= 1;
             burst(h.x, h.y, '#9fe3ff', 34);
           } else if (shields > 0) {
