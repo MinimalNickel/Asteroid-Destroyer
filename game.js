@@ -83,11 +83,13 @@
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
-  const MAX_UPGRADE_LEVEL = 12;
+  const MAX_UPGRADE_LEVEL = 15;
   // Cost to buy level (index+1) of Damage or Fire Rate -- shared curve for both.
   // Grows roughly geometrically (~1.6x per level) so a thorough player is
-  // still chasing the last few levels around wave 70-90, not maxed by wave 20.
-  const UPGRADE_COSTS = [50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870];
+  // still chasing the mid-teens levels around wave 70-90, not maxed by wave 20.
+  // The last 3 levels (13-15) push into true-endgame-grind territory -- more
+  // of an aspirational stretch goal than something most runs will finish.
+  const UPGRADE_COSTS = [50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870, 15800, 25300, 40500];
   let upgrades, fireCooldown, bulletDamage;
 
   function upgradeCost(stat, level) {

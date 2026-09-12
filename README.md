@@ -29,7 +29,7 @@ Clear a wave and you can spend your gold on an upgrade before the next one start
 - **Rate of Fire** — about 12% faster per level.
 - **Damage** — +1 damage per shot per level.
 
-Rate of Fire and Damage share the same very steep cost curve (both cap at level 12): 50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870 gold for levels 1-12 — each level costs roughly 1.6x the last. It's a deliberately long grind: a thorough player is still chasing the last few levels around wave 70-90, not maxed out by wave 20. You can also skip an upgrade to save your gold for later.
+Rate of Fire and Damage share the same very steep cost curve (both cap at level 15): 50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870, 15800, 25300, 40500 gold for levels 1-15 — each level costs roughly 1.6x the last. It's a deliberately long grind: a thorough player is still chasing the mid-teens levels around wave 70-90, and the last 3 levels (13-15) are more of an aspirational stretch goal than something most runs will finish. You can also skip an upgrade to save your gold for later.
 
 ## Playing
 
