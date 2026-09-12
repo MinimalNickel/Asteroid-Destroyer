@@ -78,10 +78,11 @@
 
   // ---- Player upgrades ----
   const BASE_FIRE_COOLDOWN = 0.35;
-  const MAX_UPGRADE_LEVEL = 10;
-  // Cost to buy level (index+1) of Damage or Fire Rate -- shared curve for both,
-  // steep enough that a player isn't fully maxed out until deep into a long run.
-  const UPGRADE_COSTS = [45, 75, 115, 165, 225, 295, 375, 465, 565, 685];
+  const MAX_UPGRADE_LEVEL = 12;
+  // Cost to buy level (index+1) of Damage or Fire Rate -- shared curve for both.
+  // Grows roughly geometrically (~1.6x per level) so a thorough player is
+  // still chasing the last few levels around wave 70-90, not maxed by wave 20.
+  const UPGRADE_COSTS = [50, 80, 130, 210, 340, 550, 890, 1440, 2330, 3770, 6100, 9870];
   let upgrades, fireCooldown, bulletDamage;
 
   function upgradeCost(stat, level) {
@@ -114,9 +115,19 @@
     return Math.min(5 + w * 2, 60);
   }
 
-  // +2 HP every 5 waves: waves 1-5 get the base HP, 6-10 get +2, 11-15 +4, etc.
+  // Hard ceiling on how many hazards can be alive on screen at once. Without
+  // this, a wave that briefly falls behind never recovers: nothing here
+  // despawns by leaving the screen (it wraps around instead), so any kill-rate
+  // shortfall just accumulates for the rest of the wave. This caps the
+  // backlog itself rather than only the spawn rate feeding it.
+  const MAX_CONCURRENT_HAZARDS = 8;
+
+  // +1 HP every 5 waves: waves 1-5 get the base HP, 6-10 get +1, 11-15 +2, etc.
+  // Still gets tougher all the way to wave 99, but without pushing nearly
+  // every hazard past 40 HP by the end -- that's what turned the late game
+  // into an unavoidable backlog regardless of player skill or gear.
   function hpForWave(baseHp, w) {
-    return baseHp + 2 * Math.floor((w - 1) / 5);
+    return baseHp + Math.floor((w - 1) / 5);
   }
 
   function makeStars() {
@@ -158,6 +169,7 @@
     enemiesToSpawn = enemiesForWave(wave);
     screenShake = 0;
     tookDamageThisWave = false;
+    meteorCooldown = 0;
     updateHud();
     updateStatusHud();
     makeStars();
@@ -222,9 +234,13 @@
   }
 
   // Small asteroids scale like everything else, but capped so they never
-  // become tediously tanky -- their base HP of 1 would otherwise be the
-  // worst-scaling hazard in the game by wave 99.
-  const SMALL_ASTEROID_HP_CAP = 8;
+  // become tediously tanky -- they're already dangerous just for being
+  // tiny and fast.
+  const SMALL_ASTEROID_HP_CAP = 7;
+
+  // Plasma Clouds are meant to be a debuff threat, not a tank -- capped so
+  // their HP never becomes the reason one lingers on screen.
+  const PLASMA_CLOUD_HP_CAP = 14;
 
   function spawnAsteroid(size = null, x = null, y = null) {
     const tier = size || 'large';
@@ -309,7 +325,7 @@
       rot: 0,
       rotSpeed: 0,
       puffs,
-      hp: hpForWave(3, wave),
+      hp: Math.min(hpForWave(3, wave), PLASMA_CLOUD_HP_CAP),
       trailTimer: 0
     });
   }
@@ -337,27 +353,40 @@
   // Wave-gated spawn pool: which hazards can appear, and how often relative
   // to each other, at a given wave. Asteroids-only for waves 1-2, comets join
   // at wave 3, meteors at wave 5, plasma clouds at wave 8, alien turrets at
-  // wave 12 -- after which every hazard type is in the mix.
+  // wave 12 -- after which every hazard type is in the mix. Meteor weights
+  // are kept modest since one meteor already wipes every shield at once --
+  // late-game difficulty should come from juggling several hazard *types*
+  // at once, not from meteors alone getting more common too.
   function availableSpawns(w) {
-    const pool = [{ fn: () => spawnAsteroid('large'), weight: 10 }];
-    if (w >= 3) pool.push({ fn: () => spawnComet(false), weight: 5 });
-    if (w >= 5) pool.push({ fn: () => spawnMeteor(false), weight: 4 });
-    if (w >= 5) pool.push({ fn: () => spawnComet(true), weight: 1.5 });
-    if (w >= 7) pool.push({ fn: () => spawnMeteor(true), weight: 1.2 });
-    if (w >= 8) pool.push({ fn: () => spawnPlasmaCloud(), weight: 3 });
-    if (w >= 12) pool.push({ fn: () => spawnAlienTurret(), weight: 2 });
+    const pool = [{ kind: 'asteroid', fn: () => spawnAsteroid('large'), weight: 10 }];
+    if (w >= 3) pool.push({ kind: 'comet', fn: () => spawnComet(false), weight: 5 });
+    if (w >= 5) pool.push({ kind: 'meteor', fn: () => spawnMeteor(false), weight: 3 });
+    if (w >= 5) pool.push({ kind: 'comet', fn: () => spawnComet(true), weight: 1.5 });
+    if (w >= 7) pool.push({ kind: 'meteor', fn: () => spawnMeteor(true), weight: 0.8 });
+    if (w >= 8) pool.push({ kind: 'plasmaCloud', fn: () => spawnPlasmaCloud(), weight: 3 });
+    if (w >= 12) pool.push({ kind: 'alienTurret', fn: () => spawnAlienTurret(), weight: 2 });
     return pool;
   }
 
+  // Guarantees real spacing between meteor arrivals -- without this, a run
+  // of bad luck could roll several meteors within a couple seconds of each
+  // other, and since a single meteor already wipes every shield, that's an
+  // effectively unavoidable death no matter how skilled the player is.
+  let meteorCooldown = 0;
+  const METEOR_COOLDOWN_DURATION = 4;
+
   function spawnRandomHazard() {
-    const pool = availableSpawns(wave);
+    let pool = availableSpawns(wave);
+    if (meteorCooldown > 0) pool = pool.filter(p => p.kind !== 'meteor');
     const total = pool.reduce((sum, p) => sum + p.weight, 0);
     let roll = Math.random() * total;
+    let picked = pool[pool.length - 1];
     for (const p of pool) {
       roll -= p.weight;
-      if (roll <= 0) { p.fn(); return; }
+      if (roll <= 0) { picked = p; break; }
     }
-    pool[pool.length - 1].fn();
+    picked.fn();
+    if (picked.kind === 'meteor') meteorCooldown = METEOR_COOLDOWN_DURATION;
   }
 
   // Sends a paused (offscreen) alien turret back in from its entry edge to
@@ -719,9 +748,11 @@
   function startNextWave() {
     wave += 1;
     enemiesToSpawn = enemiesForWave(wave);
-    // Ramps down gradually over a much longer stretch than before so hazards
-    // keep spawning faster well into a long run instead of maxing out by wave 10.
-    spawnInterval = Math.max(0.35, 1.6 - wave * 0.03);
+    // Ramps down gradually over a long stretch so hazards keep spawning
+    // faster well into a long run, but the floor is kept high enough that
+    // late-game waves stay theoretically manageable rather than flooding
+    // the screen faster than they can possibly be destroyed.
+    spawnInterval = Math.max(0.52, 1.6 - wave * 0.03);
     spawnTimer = 0;
     tookDamageThisWave = false;
     updateHud();
@@ -759,6 +790,7 @@
   // ---- Update ----
   function update(dt) {
     if (ship.fireTimer > 0) ship.fireTimer -= dt;
+    if (meteorCooldown > 0) meteorCooldown -= dt;
 
     // ship status effects
     if (ship.frozenTimer > 0) {
@@ -784,7 +816,7 @@
     // spawn hazards for this wave
     if (enemiesToSpawn > 0) {
       spawnTimer -= dt;
-      if (spawnTimer <= 0) {
+      if (spawnTimer <= 0 && hazards.length < MAX_CONCURRENT_HAZARDS) {
         spawnTimer = spawnInterval;
         spawnRandomHazard();
         enemiesToSpawn -= 1;
