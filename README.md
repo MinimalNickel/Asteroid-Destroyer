@@ -2,15 +2,15 @@
 
 A mobile-friendly 2D turret-defense game built with plain HTML5 Canvas and JavaScript (no build step, no dependencies).
 
-You're a turret mounted on a spaceship. Asteroids, comets, and meteors drift in from above — hold your finger on the screen to aim your turret and fire continuously; move your finger to steer it. Any of them can be destroyed by a normal shot. There's no health bar: one unblocked hit destroys you. Destroying something earns gold and score, which you can spend between waves.
+You're a turret mounted on a spaceship. Your turret is fixed pointing straight up and fires on its own — asteroids, comets, and meteors drift in from above, and you steer the whole ship left and right (by tilting your phone, or dragging on desktop) to line up your shots and dodge what you can't destroy in time. Any of them can be destroyed by a normal shot. There's no health bar: one unblocked hit destroys you. Destroying something earns gold and score, which you can spend between waves.
 
 Hazards and effects:
 
 - **Asteroids** split into smaller, faster pieces when hit. Reaching your ship consumes one shield — with no shields left, it's instant death.
-- **Comets** (icy blue) freeze your turret for a few seconds if they reach you. They don't damage you or touch your shields.
+- **Comets** (icy blue) freeze your ship in place for a few seconds if they reach you — you keep firing, but can't move to dodge or line up shots. They don't damage you or touch your shields.
 - **Meteors** wipe out all your shields at once if they reach you — unless you've upgraded one to a meteor shield (see the Shield upgrade below), which absorbs a meteor hit one at a time instead, so a meteor only fully wipes you out once your meteor shields are gone too. With no shields left, a meteor is instant death. Because they're already this dangerous, meteors are kept spaced out: at least ~4 seconds real time between arrivals, so you never get two back-to-back with no time to recover.
 - **Plasma Clouds** (green, from wave 12) don't cost a shield or freeze you — instead they weaken your turret, dropping fire rate and damage to 60% for 5 seconds.
-- **Alien Turrets** (purple, from wave 16) sweep left-to-right or right-to-left across the screen while shooting bolts at your ship (asteroid-style: costs a shield, or instant death with none left) — you can shoot their bolts down before they land. When a turret exits the screen it pauses offscreen for 15 seconds before sweeping back in from the same side; if it's the only hazard left, it skips the pause and loops continuously so you're never left waiting. You have to shoot the turret itself to destroy it; it takes several hits and doesn't split. Clearing a wave wipes any of its bolts still in flight, so destroying the turret without shooting down its last shot can't carry an unavoidable hit into the wave that follows.
+- **Alien Turrets** (purple, from wave 16) sweep left-to-right or right-to-left across the screen while shooting bolts at your ship (asteroid-style: costs a shield, or instant death with none left) — dodge them by steering out of the way, or shoot them down before they land. When a turret exits the screen it pauses offscreen for 15 seconds before sweeping back in from the same side; if it's the only hazard left, it skips the pause and loops continuously so you're never left waiting. You have to shoot the turret itself to destroy it; it takes several hits and doesn't split. Clearing a wave wipes any of its bolts still in flight, so destroying the turret without shooting down its last shot can't carry an unavoidable hit into the wave that follows.
 - Rare **big** comet/meteor versions show up a couple of waves after their normal counterpart — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
 - Nothing escapes off-screen — anything that drifts past an edge loops back in from the top and comes at you again, so you have to destroy everything eventually (alien turrets manage their own offscreen pause/re-entry instead). Hazards also aim more aggressively at your ship than they used to.
 - Hazard HP scales with wave: every enemy's HP goes up by +1 every 5 waves (`baseHP + floor((wave-1)/5)`), so waves 1-5 are base HP, 6-10 are +1, 11-15 are +2, and so on through wave 99. Small Asteroids are capped at 7 HP and Plasma Clouds at 14 HP so neither becomes a tedious bullet sponge late-game — Plasma Clouds especially are meant to be a debuff threat, not a tank.
@@ -42,8 +42,8 @@ python3 -m http.server 8000
 
 ## Controls
 
-- **Press and hold** anywhere above the ship: aims the turret at that point and fires continuously while held.
-- **Drag while holding**: steer the turret to follow your finger.
+- **Tilt your phone left or right** to move the ship in that direction — the turret fires on its own the whole time, straight up. The tilt angle you're holding the phone at when a run starts is calibrated as "center," so tilt relative to however you're comfortably holding it.
+- **Drag left/right on the screen** works too, as a fallback for desktop testing or if tilt permission isn't granted (iOS Safari requires an explicit permission prompt for motion sensors, requested the moment you tap "Tap to Start").
 - **On the wave-clear screen**: tap an upgrade card to buy and apply it (if you can afford it), or tap "Next Wave" to skip.
 
 ## Gameplay
