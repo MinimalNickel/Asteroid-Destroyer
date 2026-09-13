@@ -59,8 +59,20 @@
   let spawnTimer = 0, spawnInterval = 1.6;
   let enemiesToSpawn = 0;
   let screenShake = 0;
-  let isFiring = false;
   let tookDamageThisWave = false;
+
+  // ---- Tilt-to-move ----
+  // The turret is fixed, always pointed straight up and firing automatically;
+  // steering is now moving the ship itself left/right, either by tilting the
+  // phone or (as a fallback for desktop/denied-permission) dragging.
+  const MAX_TILT_ANGLE = 20; // degrees of tilt (beyond the deadzone) for max speed
+  const TILT_DEADZONE = 2; // degrees of tilt ignored around the calibrated center
+  const TILT_MAX_SPEED = 480; // px/sec at full tilt
+  let tiltBaseline = null; // calibrated to however the phone is held when tilt starts
+  let tiltVelocity = 0;
+  let isDragging = false;
+  let dragStartClientX = 0;
+  let dragStartShipX = 0;
   const MAX_SHIELDS = 3;
   const SHIELD_COSTS = [30, 90, 200];
   // Once all 3 shields are bought, the Shield upgrade card switches over to
@@ -164,11 +176,13 @@
       y: H - 90,
       radius: 26,
       angle: -Math.PI / 2,
-      targetAngle: -Math.PI / 2,
       frozenTimer: 0,
       debuffTimer: 0,
       fireTimer: 0
     };
+    tiltVelocity = 0;
+    tiltBaseline = null;
+    isDragging = false;
     bullets = [];
     enemyBullets = [];
     hazards = [];
@@ -600,73 +614,93 @@
   }
 
   // ---- Input ----
-  function aimAt(px, py) {
-    let ang = Math.atan2(py - ship.y, px - ship.x);
-    const upMin = -Math.PI + 0.12;
-    const upMax = -0.12;
-    if (ang > upMax) ang = upMax;
-    if (ang < upMin && ang > -Math.PI) ang = upMin;
-    ship.targetAngle = ang;
-  }
-
+  // The turret never turns -- it's fixed pointing straight up and fires on
+  // its own. All player input just moves the ship left/right.
   function fireBullet() {
     if (ship.fireTimer > 0) return;
     ship.fireTimer = currentFireCooldown();
     const speed = 620;
-    const tipX = ship.x + Math.cos(ship.angle) * (ship.radius + 10);
-    const tipY = ship.y + Math.sin(ship.angle) * (ship.radius + 10);
     bullets.push({
-      x: tipX, y: tipY,
-      vx: Math.cos(ship.angle) * speed,
-      vy: Math.sin(ship.angle) * speed,
+      x: ship.x, y: ship.y - ship.radius - 10,
+      vx: 0,
+      vy: -speed,
       life: 1.4
     });
     sfxLaser();
     if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} }
   }
 
-  function startFiring(clientX, clientY) {
+  // iOS 13+ Safari requires an explicit user-gesture-triggered permission
+  // prompt before it'll deliver deviceorientation events at all; other
+  // browsers (Android Chrome, desktop) have no such gate and no
+  // requestPermission method. Called from startGame(), itself always
+  // triggered directly by a button tap, so this stays inside that gesture.
+  let tiltPermissionRequested = false;
+  function requestTiltPermission() {
+    if (tiltPermissionRequested) return;
+    tiltPermissionRequested = true;
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(result => { if (result === 'granted') window.addEventListener('deviceorientation', handleTilt); })
+        .catch(() => {});
+    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+      window.addEventListener('deviceorientation', handleTilt);
+    }
+  }
+
+  function handleTilt(e) {
+    if (e.gamma === null) return;
+    // Calibrate to whatever angle the phone happens to be held at when tilt
+    // input starts, rather than assuming dead-flat is neutral.
+    if (tiltBaseline === null) tiltBaseline = e.gamma;
+    const delta = e.gamma - tiltBaseline;
+    const mag = clamp((Math.abs(delta) - TILT_DEADZONE) / (MAX_TILT_ANGLE - TILT_DEADZONE), 0, 1);
+    tiltVelocity = (delta < 0 ? -mag : mag) * TILT_MAX_SPEED;
+  }
+
+  function startDrag(clientX) {
     if (state !== STATE.PLAYING) return;
-    isFiring = true;
+    isDragging = true;
+    dragStartClientX = clientX;
+    dragStartShipX = ship.x;
     // Re-resume defensively -- mobile browsers can suspend the AudioContext
     // again after the tab is backgrounded, so every tap re-checks it.
     ensureAudio();
-    if (ship.frozenTimer <= 0) aimAt(clientX, clientY);
   }
 
-  function updateAim(clientX, clientY) {
-    if (state === STATE.PLAYING && isFiring && ship.frozenTimer <= 0) aimAt(clientX, clientY);
+  function updateDrag(clientX) {
+    if (state !== STATE.PLAYING || !isDragging || ship.frozenTimer > 0) return;
+    ship.x = clamp(dragStartShipX + (clientX - dragStartClientX), ship.radius, W - ship.radius);
   }
 
-  function stopFiring() {
-    isFiring = false;
+  function stopDrag() {
+    isDragging = false;
   }
 
   canvas.addEventListener('pointerdown', (e) => {
-    startFiring(e.clientX, e.clientY);
+    startDrag(e.clientX);
   });
   canvas.addEventListener('pointermove', (e) => {
     if (e.pressure === 0 && e.pointerType === 'mouse') return;
-    if (e.buttons > 0) updateAim(e.clientX, e.clientY);
+    if (e.buttons > 0) updateDrag(e.clientX);
   });
-  canvas.addEventListener('pointerup', stopFiring);
-  canvas.addEventListener('pointercancel', stopFiring);
+  canvas.addEventListener('pointerup', stopDrag);
+  canvas.addEventListener('pointercancel', stopDrag);
   canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    const t = e.changedTouches[0];
-    startFiring(t.clientX, t.clientY);
+    startDrag(e.changedTouches[0].clientX);
   }, { passive: false });
   canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    if (e.touches.length) updateAim(e.touches[0].clientX, e.touches[0].clientY);
+    if (e.touches.length) updateDrag(e.touches[0].clientX);
   }, { passive: false });
   canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    stopFiring();
+    stopDrag();
   }, { passive: false });
   canvas.addEventListener('touchcancel', (e) => {
     e.preventDefault();
-    stopFiring();
+    stopDrag();
   }, { passive: false });
 
   startBtn.addEventListener('click', startGame);
@@ -719,6 +753,7 @@
 
   function startGame() {
     ensureAudio();
+    requestTiltPermission();
     resetGame();
     state = STATE.PLAYING;
     startScreen.classList.add('hidden');
@@ -841,16 +876,14 @@
       updateStatusHud();
     }
 
-    // turret smoothing (frozen turret stays put)
-    if (ship.frozenTimer <= 0) {
-      let da = ship.targetAngle - ship.angle;
-      while (da > Math.PI) da -= Math.PI * 2;
-      while (da < -Math.PI) da += Math.PI * 2;
-      ship.angle += da * clamp(dt * 12, 0, 1);
+    // tilt-to-move (frozen ship can't dodge, but keeps auto-firing)
+    if (ship.frozenTimer <= 0 && !isDragging) {
+      ship.x = clamp(ship.x + tiltVelocity * dt, ship.radius, W - ship.radius);
     }
 
-    // hold-to-fire: keep shooting while the finger/pointer is held down
-    if (isFiring && ship.frozenTimer <= 0) fireBullet();
+    // auto-fire: the turret is fixed straight up and never stops shooting,
+    // even while frozen -- freeze only takes away your ability to steer.
+    fireBullet();
 
     // spawn hazards for this wave
     if (enemiesToSpawn > 0) {
@@ -1262,7 +1295,7 @@
   // initial idle scene
   upgrades = { fireRate: 0, damage: 0 };
   applyUpgradeEffects();
-  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, targetAngle: -Math.PI / 2, frozenTimer: 0, debuffTimer: 0, fireTimer: 0 };
+  ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, frozenTimer: 0, debuffTimer: 0, fireTimer: 0 };
   bullets = []; enemyBullets = []; hazards = []; particles = [];
   makeStars();
 
