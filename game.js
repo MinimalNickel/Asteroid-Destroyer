@@ -26,6 +26,7 @@
   const victoryScreen = document.getElementById('victoryScreen');
   const victoryScoreEl = document.getElementById('victoryScore');
   const playAgainBtn = document.getElementById('playAgainBtn');
+  const muteBtn = document.getElementById('muteBtn');
 
   const BEST_KEY = 'asteroidDestroyer.best';
   const BEST_WAVE_KEY = 'asteroidDestroyer.bestWave';
@@ -157,11 +158,15 @@
     stars = [];
     const count = 90;
     for (let i = 0; i < count; i++) {
+      const r = rand(0.5, 1.8);
       stars.push({
         x: Math.random() * W,
         y: Math.random() * H,
-        r: rand(0.5, 1.8),
-        tw: rand(0, Math.PI * 2)
+        r,
+        tw: rand(0, Math.PI * 2),
+        // Bigger stars drift faster than small ones, a cheap parallax hint
+        // that you're flying forward rather than the field just twinkling.
+        speed: r * rand(0.5, 0.9) + rand(0.15, 0.35)
       });
     }
   }
@@ -526,18 +531,51 @@
 
   // ---- Audio (all synthesized -- no sound files, no dependencies) ----
   let audioCtx = null;
+  let masterGain = null; // everything (SFX + music) routes through this -- the mute button just zeroes it
+  let musicGain = null;
+
+  const MUTE_KEY = 'asteroidDestroyer.muted';
+  let muted = false;
+  try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+
+  function setMuted(v) {
+    muted = v;
+    try { localStorage.setItem(MUTE_KEY, v ? '1' : '0'); } catch (e) {}
+    if (masterGain) masterGain.gain.value = v ? 0 : 1;
+    updateMuteButton();
+  }
+
+  function updateMuteButton() {
+    muteBtn.classList.toggle('muted', muted);
+    muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+  }
+
+  muteBtn.addEventListener('click', () => {
+    ensureAudio();
+    setMuted(!muted);
+  });
 
   // Browsers refuse to start/resume an AudioContext without a user gesture,
-  // so this is only ever called from a button click (startGame). Many mobile
-  // browsers (iOS Safari especially) still hand back a freshly-created
-  // context in the 'suspended' state even from inside that gesture, so it's
-  // not enough to resume() only on reuse -- a brand-new context needs it too,
-  // or every sound is silently dropped for the whole first playthrough.
+  // so this is only ever called from a button click (startGame, muteBtn).
+  // Many mobile browsers (iOS Safari especially) still hand back a
+  // freshly-created context in the 'suspended' state even from inside that
+  // gesture, so it's not enough to resume() only on reuse -- a brand-new
+  // context needs it too, or every sound is silently dropped for the whole
+  // first playthrough.
   function ensureAudio() {
     try {
       if (!audioCtx) {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (Ctx) audioCtx = new Ctx();
+        if (audioCtx) {
+          masterGain = audioCtx.createGain();
+          masterGain.gain.value = muted ? 0 : 1;
+          masterGain.connect(audioCtx.destination);
+          musicGain = audioCtx.createGain();
+          musicGain.gain.value = 1;
+          musicGain.connect(masterGain);
+          musicNextNoteTime = audioCtx.currentTime + 0.15;
+        }
       }
       if (audioCtx && audioCtx.state !== 'running') {
         audioCtx.resume().catch(() => {});
@@ -546,7 +584,7 @@
   }
 
   function playTone({ freq, endFreq = freq, type = 'sine', duration = 0.15, volume = 0.15, attack = 0.005, delay = 0 }) {
-    if (!audioCtx) return;
+    if (!audioCtx || !masterGain) return;
     if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
     const t0 = audioCtx.currentTime + delay;
     const osc = audioCtx.createOscillator();
@@ -557,13 +595,13 @@
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.linearRampToValueAtTime(volume, t0 + attack);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-    osc.connect(gain).connect(audioCtx.destination);
+    osc.connect(gain).connect(masterGain);
     osc.start(t0);
     osc.stop(t0 + duration + 0.02);
   }
 
   function playNoise({ duration = 0.2, volume = 0.15, filterType = 'lowpass', filterFreq = 800, filterQ = 1, delay = 0 }) {
-    if (!audioCtx) return;
+    if (!audioCtx || !masterGain) return;
     if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
     const t0 = audioCtx.currentTime + delay;
     const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
@@ -579,14 +617,28 @@
     const gain = audioCtx.createGain();
     gain.gain.setValueAtTime(volume, t0);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
-    noise.connect(filter).connect(gain).connect(audioCtx.destination);
+    noise.connect(filter).connect(gain).connect(masterGain);
     noise.start(t0);
     noise.stop(t0 + duration + 0.02);
   }
 
-  // Quick descending laser blip -- fired a lot, so kept short and cheap.
+  // Quick descending laser blip -- fired constantly now that the turret
+  // auto-fires, so it's kept short, cheap, and quiet.
   function sfxLaser() {
-    playTone({ freq: 1100, endFreq: 320, type: 'square', duration: 0.09, volume: 0.08, attack: 0.002 });
+    playTone({ freq: 1100, endFreq: 320, type: 'square', duration: 0.09, volume: 0.035, attack: 0.002 });
+  }
+
+  // Light tick for a bullet hit that doesn't destroy its target.
+  function sfxHit() {
+    playNoise({ duration: 0.04, volume: 0.05, filterType: 'highpass', filterFreq: 3200, filterQ: 0.9 });
+  }
+
+  // Explosion for a hazard actually being destroyed -- scaled by its radius
+  // so a small asteroid pops while a big meteor or Alien Turret booms.
+  function sfxExplosion(radius) {
+    const scale = clamp(radius / 32, 0.5, 1.8);
+    playNoise({ duration: 0.16 * scale, volume: 0.11 * scale, filterType: 'lowpass', filterFreq: 2000 / scale, filterQ: 0.6 });
+    playTone({ freq: 210 / scale, endFreq: 55 / scale, type: 'sawtooth', duration: 0.2 * scale, volume: 0.09 * scale, attack: 0.003 });
   }
 
   // Icy shimmer for a comet freezing the turret.
@@ -611,6 +663,63 @@
   function sfxMeteorHit() {
     playNoise({ duration: 0.25, volume: 0.2, filterType: 'lowpass', filterFreq: 2200, filterQ: 0.5 });
     playTone({ freq: 150, endFreq: 45, type: 'sawtooth', duration: 0.3, volume: 0.18, attack: 0.004 });
+  }
+
+  // ---- Background music ----
+  // A small procedurally-scheduled loop rather than an audio file, kept in
+  // step with README's no-dependencies constraint. Uses the standard
+  // "schedule ahead of audioCtx.currentTime" technique so timing stays
+  // sample-accurate regardless of frame-rate hiccups in the main rAF loop.
+  let musicNextNoteTime = 0;
+  let musicStep = 0;
+  const MUSIC_STEP_DURATION = 0.2;
+  const MUSIC_SCHEDULE_AHEAD = 0.25;
+  // A minor, retro-arcade feel: a steady 8-step bass under a 16-step lead
+  // arpeggio (rests included) so the loop doesn't feel like an obvious
+  // 2-second stutter.
+  const MUSIC_BASS = [110, 110, 130.81, 110, 98, 98, 110, 146.83];
+  const MUSIC_LEAD = [
+    440, 0, 523.25, 0, 587.33, 523.25, 0, 440,
+    392, 0, 440, 523.25, 0, 392, 0, 349.23
+  ];
+
+  function playMusicNote({ freq, type, duration, volume, t0 }) {
+    if (!audioCtx || !musicGain) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(musicGain);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+
+  function scheduleMusic() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    while (musicNextNoteTime < audioCtx.currentTime + MUSIC_SCHEDULE_AHEAD) {
+      playMusicNote({
+        freq: MUSIC_BASS[musicStep % MUSIC_BASS.length],
+        type: 'triangle',
+        duration: MUSIC_STEP_DURATION * 0.9,
+        volume: 0.05,
+        t0: musicNextNoteTime
+      });
+      const leadFreq = MUSIC_LEAD[musicStep % MUSIC_LEAD.length];
+      if (leadFreq > 0) {
+        playMusicNote({
+          freq: leadFreq,
+          type: 'square',
+          duration: MUSIC_STEP_DURATION * 0.55,
+          volume: 0.035,
+          t0: musicNextNoteTime
+        });
+      }
+      musicNextNoteTime += MUSIC_STEP_DURATION;
+      musicStep++;
+    }
   }
 
   // ---- Input ----
@@ -1073,10 +1182,13 @@
           if (h.hp <= 0) {
             awardKill(h);
             burst(h.x, h.y, '#ffd27f', 18);
+            sfxExplosion(h.radius);
             if (h.kind === 'asteroid') splitAsteroid(h);
             else if ((h.kind === 'comet' || h.kind === 'meteor') && h.big) splitBigHazard(h);
             hazards.splice(i, 1);
             updateHud();
+          } else {
+            sfxHit();
           }
           break;
         }
@@ -1239,6 +1351,11 @@
     ctx.fillRect(-20, -20, W + 40, H + 40);
     stars.forEach(s => {
       s.tw += 0.02;
+      s.y += s.speed;
+      if (s.y - s.r > H) {
+        s.y = -s.r;
+        s.x = Math.random() * W;
+      }
       const alpha = 0.4 + Math.sin(s.tw) * 0.4;
       ctx.fillStyle = `rgba(200,220,255,${clamp(alpha, 0.15, 0.9)})`;
       ctx.beginPath();
@@ -1288,6 +1405,7 @@
 
     if (state === STATE.PLAYING) update(dt);
     draw();
+    scheduleMusic();
 
     requestAnimationFrame(loop);
   }
@@ -1298,6 +1416,7 @@
   ship = { x: W / 2, y: H - 90, radius: 26, angle: -Math.PI / 2, frozenTimer: 0, debuffTimer: 0, fireTimer: 0 };
   bullets = []; enemyBullets = []; hazards = []; particles = [];
   makeStars();
+  updateMuteButton();
 
   const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
   if (best > 0) bestScoreEl.textContent = 'Best: ' + best;
