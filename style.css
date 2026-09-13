@@ -30,17 +30,68 @@ html, body {
   right: 0;
   padding: max(12px, env(safe-area-inset-top)) 16px 0 16px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   pointer-events: none;
   color: #eaf0ff;
   text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
-#shieldsWrap {
+#hudLeft {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#shieldsWrap {
+  display: flex;
   gap: 6px;
+}
+
+#muteBtn {
+  pointer-events: auto;
+  position: relative;
+  z-index: 20;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.08);
+  color: #eaf0ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+#muteBtn:active {
+  transform: scale(0.92);
+}
+
+#muteBtn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+#muteBtn .mute-speaker {
+  fill: currentColor;
+  stroke: none;
+}
+
+#muteBtn .mute-slash {
+  display: none;
+  stroke: #ff8a8a;
+}
+
+#muteBtn.muted .mute-wave {
+  display: none;
+}
+
+#muteBtn.muted .mute-slash {
+  display: block;
 }
 
 .shield-pip {
