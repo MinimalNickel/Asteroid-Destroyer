@@ -650,7 +650,7 @@
   // Quick descending laser blip -- fired constantly now that the turret
   // auto-fires, so it's kept short, cheap, and quiet.
   function sfxLaser() {
-    playTone({ freq: 1100, endFreq: 320, type: 'square', duration: 0.09, volume: 0.035, attack: 0.002 });
+    playTone({ freq: 1100, endFreq: 320, type: 'square', duration: 0.09, volume: 0.022, attack: 0.002 });
   }
 
   // Light tick for a bullet hit that doesn't destroy its target.
@@ -697,10 +697,15 @@
     playNoise({ duration: 0.08, volume: 0.06, filterType: 'bandpass', filterFreq: 1200, filterQ: 1 });
   }
 
-  // Descending sting for the moment you're destroyed.
+  // Impact sting for the moment you're destroyed, followed by a short
+  // descending minor "defeated" phrase -- the sad mirror of sfxWaveClear's
+  // triumphant rising one.
   function sfxDeath() {
     playTone({ freq: 300, endFreq: 40, type: 'sawtooth', duration: 0.6, volume: 0.16, attack: 0.005 });
     playNoise({ duration: 0.5, volume: 0.14, filterType: 'lowpass', filterFreq: 900, filterQ: 0.5, delay: 0.05 });
+    [440, 349.23, 293.66, 220].forEach((freq, i) => {
+      playTone({ freq, type: 'triangle', duration: 0.3, volume: 0.08, attack: 0.01, delay: 0.3 + i * 0.18 });
+    });
   }
 
   // Quick rising major arpeggio fanfare for clearing a wave.
@@ -1011,6 +1016,7 @@
 
   function endGame() {
     state = STATE.OVER;
+    musicPaused = true;
     sfxDeath();
     const { best, bestWave } = updateBests();
     finalScoreEl.textContent = 'Score: ' + score;
