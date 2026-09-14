@@ -76,13 +76,33 @@
   let dragStartShipX = 0;
   const MAX_SHIELDS = 3;
   const SHIELD_COSTS = [30, 90, 200];
-  // Once all 3 shields are bought, the Shield upgrade card switches over to
-  // offering a Meteor Shield upgrade instead: converting one of your existing
-  // shields so it survives a meteor hit (absorbing just that one shield)
-  // rather than being wiped out along with the rest. Purchased in order, so
-  // meteorUpgrades counts up from 0 to MAX_SHIELDS.
+  // Once all 3 shields are full, the Shield upgrade card switches over to
+  // offering a Meteor Shield upgrade instead: converting one of your current
+  // normal shields so it survives a meteor hit (absorbing just that one)
+  // instead of being wiped out along with the rest.
+  //
+  // resistantShields counts how many of your CURRENT shields are
+  // meteor-resistant right now -- not how many you've ever bought. It's tied
+  // to actual shield charges, not a permanent unlock: losing a resistant
+  // shield (to anything, not just a meteor) spends that resistance along
+  // with it, same as losing any other shield. Restoring a lost shield always
+  // gives back a plain one; resistance has to be bought again.
+  //
+  // Resistant shields always occupy the *last* resistantShields of your
+  // currently-filled shields (i.e. the ones you'd lose first), so both hits
+  // and restores/upgrades only ever need to touch the two counts below --
+  // no per-shield bookkeeping required.
   const METEOR_UPGRADE_COSTS = [350, 550, 850];
-  let meteorUpgrades = 0;
+  let resistantShields = 0;
+
+  // Removes exactly one shield, whatever kind it is. If it happened to be
+  // one of the meteor-resistant ones (always the last shield in line), that
+  // resistance is gone too -- restoring the shield later gives back a plain
+  // one, not another resistant one.
+  function loseOneShield() {
+    shields -= 1;
+    if (resistantShields > 0) resistantShields -= 1;
+  }
 
   // ---- Plasma Cloud (green) -- debuffs the turret instead of costing a shield ----
   const PLASMA_DEBUFF_DURATION = 5;
@@ -175,7 +195,7 @@
     upgrades = { fireRate: 0, damage: 0 };
     applyUpgradeEffects();
     shields = 0;
-    meteorUpgrades = 0;
+    resistantShields = 0;
     ship = {
       x: W / 2,
       y: H - 90,
@@ -209,8 +229,12 @@
 
   function updateHud() {
     shieldPips.forEach((el, i) => {
-      el.classList.toggle('filled', i < shields);
-      el.classList.toggle('resistant', i >= MAX_SHIELDS - meteorUpgrades);
+      const filled = i < shields;
+      el.classList.toggle('filled', filled);
+      // Resistant shields are always the last resistantShields of the
+      // *currently filled* ones -- an empty pip never shows as resistant,
+      // it's just an empty slot waiting to be restored as a plain shield.
+      el.classList.toggle('resistant', filled && i >= shields - resistantShields);
     });
     currencyLabelEl.textContent = 'Gold: ' + currency;
     scoreLabelEl.textContent = 'Score: ' + score;
@@ -865,11 +889,11 @@
           if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
           currency -= cost;
           shields += 1;
-        } else if (meteorUpgrades < MAX_SHIELDS) {
-          const cost = METEOR_UPGRADE_COSTS[meteorUpgrades];
+        } else if (resistantShields < MAX_SHIELDS) {
+          const cost = METEOR_UPGRADE_COSTS[resistantShields];
           if (currency < cost) { showUpgradeMessage('Not enough gold!'); return; }
           currency -= cost;
-          meteorUpgrades += 1;
+          resistantShields += 1;
         } else {
           return;
         }
@@ -919,21 +943,21 @@
     });
     const shieldCard = upgradeCards.find(c => c.dataset.stat === 'shield');
     if (shields < MAX_SHIELDS) {
-      shieldNameEl.textContent = 'Shield';
-      shieldDescEl.textContent = 'Blocks one hit. A meteor wipes out all your shields at once.';
+      shieldNameEl.textContent = 'Restore Shield';
+      shieldDescEl.textContent = 'Blocks one hit. A meteor wipes out all your shields at once. Always restores a plain shield -- upgrade it again afterward if you want it meteor-resistant.';
       document.getElementById('shieldLevel').textContent = shields + '/' + MAX_SHIELDS;
       const cost = SHIELD_COSTS[shields];
       document.getElementById('shieldCost').textContent = cost;
       shieldCard.classList.toggle('unaffordable', currency < cost);
     } else {
       shieldNameEl.textContent = 'Meteor Shield';
-      shieldDescEl.textContent = 'Upgrade a shield to survive a meteor -- it absorbs one meteor hit instead of being wiped out with the rest.';
-      document.getElementById('shieldLevel').textContent = meteorUpgrades + '/' + MAX_SHIELDS;
-      if (meteorUpgrades >= MAX_SHIELDS) {
+      shieldDescEl.textContent = 'Upgrade a shield to survive a meteor -- it absorbs one meteor hit instead of being wiped out with the rest. Lost just like any other shield, so you\'ll need to restore and re-upgrade it if it goes down.';
+      document.getElementById('shieldLevel').textContent = resistantShields + '/' + MAX_SHIELDS;
+      if (resistantShields >= MAX_SHIELDS) {
         document.getElementById('shieldCost').textContent = 'MAX';
         shieldCard.classList.add('unaffordable');
       } else {
-        const cost = METEOR_UPGRADE_COSTS[meteorUpgrades];
+        const cost = METEOR_UPGRADE_COSTS[resistantShields];
         document.getElementById('shieldCost').textContent = cost;
         shieldCard.classList.toggle('unaffordable', currency < cost);
       }
@@ -1071,7 +1095,7 @@
         enemyBullets.splice(i, 1);
         tookDamageThisWave = true;
         if (shields > 0) {
-          shields -= 1;
+          loseOneShield();
           burst(eb.x, eb.y, '#c9a6ff', 18);
           sfxShieldHit();
           updateHud();
@@ -1157,7 +1181,7 @@
         if (h.kind === 'asteroid') {
           tookDamageThisWave = true;
           if (shields > 0) {
-            shields -= 1;
+            loseOneShield();
             burst(h.x, h.y, '#9fe3ff', 20);
             sfxShieldHit();
           } else {
@@ -1175,10 +1199,14 @@
         } else if (h.kind === 'meteor') {
           tookDamageThisWave = true;
           sfxMeteorHit();
-          if (shields > MAX_SHIELDS - meteorUpgrades) {
-            shields -= 1;
+          if (resistantShields > 0) {
+            // A meteor-resistant shield takes the hit alone, same as any
+            // other single-shield loss.
+            loseOneShield();
             burst(h.x, h.y, '#9fe3ff', 34);
           } else if (shields > 0) {
+            // No resistant shields left to absorb it -- every remaining
+            // plain shield goes down at once.
             shields = 0;
             burst(h.x, h.y, '#9fe3ff', 34);
           } else {

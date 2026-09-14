@@ -8,7 +8,7 @@ Hazards and effects:
 
 - **Asteroids** split into smaller, faster pieces when hit. Reaching your ship consumes one shield — with no shields left, it's instant death.
 - **Comets** (icy blue) freeze your ship in place for a few seconds if they reach you — you keep firing, but can't move to dodge or line up shots. They don't damage you or touch your shields.
-- **Meteors** wipe out all your shields at once if they reach you — unless you've upgraded one to a meteor shield (see the Shield upgrade below), which absorbs a meteor hit one at a time instead, so a meteor only fully wipes you out once your meteor shields are gone too. With no shields left, a meteor is instant death. Because they're already this dangerous, meteors are kept spaced out: at least ~4 seconds real time between arrivals, so you never get two back-to-back with no time to recover.
+- **Meteors** wipe out all your shields at once if they reach you — unless you've upgraded one to a meteor shield (see the Shield upgrade below), which absorbs a meteor hit by itself instead, so a meteor only fully wipes you out once you have no meteor-resistant shields left. With no shields left, a meteor is instant death. Because they're already this dangerous, meteors are kept spaced out: at least ~4 seconds real time between arrivals, so you never get two back-to-back with no time to recover.
 - **Plasma Clouds** (green, from wave 12) don't cost a shield or freeze you — instead they weaken your turret, dropping fire rate and damage to 60% for 5 seconds.
 - **Alien Turrets** (purple, from wave 16) sweep left-to-right or right-to-left across the screen while shooting bolts at your ship (asteroid-style: costs a shield, or instant death with none left) — dodge them by steering out of the way, or shoot them down before they land. When a turret exits the screen it pauses offscreen for 15 seconds before sweeping back in from the same side; if it's the only hazard left, it skips the pause and loops continuously so you're never left waiting. You have to shoot the turret itself to destroy it; it takes several hits and doesn't split. Clearing a wave wipes any of its bolts still in flight, so destroying the turret without shooting down its last shot can't carry an unavoidable hit into the wave that follows.
 - Rare **big** comet/meteor versions show up a couple of waves after their normal counterpart — bigger, tougher (multiple hits to destroy), slower, but worth more gold and score. When destroyed they split into two normal-sized ones, same as asteroids splitting into smaller pieces.
@@ -25,7 +25,7 @@ Gold is a run-only currency: you earn it by destroying hazards and clearing wave
 
 Clear a wave and you can spend your gold on an upgrade before the next one starts:
 
-- **Shield** — blocks one asteroid or alien-turret hit. Max 3, costing 30g / 90g / 200g. Once all 3 are bought, the same card switches to a **Meteor Shield** upgrade: 350g / 550g / 850g each, converting one of your existing shields so it survives a meteor hit (absorbing just that one) instead of being wiped out along with the rest.
+- **Shield** — blocks one asteroid or alien-turret hit. Max 3, costing 30g / 90g / 200g. Once all 3 are full, the same card switches to a **Meteor Shield** upgrade: 350g / 550g / 850g each, converting one of your current shields so it survives a meteor hit (absorbing just that one) instead of being wiped out along with the rest. Meteor-resistance is tied to the shield itself, not a permanent unlock — lose that shield (to anything, not just a meteor) and the resistance goes with it. The card switches back to "Restore Shield" whenever you're below 3, and always gives back a plain shield; you'll need to upgrade it again if you want it meteor-resistant.
 - **Rate of Fire** — about 12% faster per level.
 - **Damage** — +1 damage per shot per level.
 
@@ -48,7 +48,7 @@ python3 -m http.server 8000
 
 ## Gameplay
 
-- No health bar — an unblocked hit ends the run. Shields (up to 3, or more if upgraded to meteor shields) are your only buffer.
+- No health bar — an unblocked hit ends the run. Shields (up to 3) are your only buffer, some of which can be upgraded to survive a meteor hit instead of being wiped by one.
 - Gold starts at 0 each run, earned per kill and per wave clear (see the upgrade section above for exact amounts) and lost when the run ends.
 - Each wave spawns a growing number of hazards (capped at 60 per wave so the late game stays playable). Everything must be destroyed to clear it — nothing despawns by leaving the screen.
 - New hazard types unlock gradually: waves 1-3 are asteroids only, comets join at wave 4, meteors at wave 8, Plasma Clouds at wave 12, and Alien Turrets at wave 16 — after wave 16 every hazard type can appear. Big comet/meteor variants unlock a couple of waves after their base type.
