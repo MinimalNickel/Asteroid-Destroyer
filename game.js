@@ -201,6 +201,7 @@
     screenShake = 0;
     tookDamageThisWave = false;
     meteorCooldown = 0;
+    resumeMusic();
     updateHud();
     updateStatusHud();
     makeStars();
@@ -665,6 +666,26 @@
     playTone({ freq: 150, endFreq: 45, type: 'sawtooth', duration: 0.3, volume: 0.18, attack: 0.004 });
   }
 
+  // Short blip when an asteroid or Alien Turret bolt costs you a shield.
+  // Meteors and Plasma Clouds already have their own distinct impact sounds.
+  function sfxShieldHit() {
+    playTone({ freq: 700, endFreq: 300, type: 'triangle', duration: 0.15, volume: 0.1, attack: 0.004 });
+    playNoise({ duration: 0.08, volume: 0.06, filterType: 'bandpass', filterFreq: 1200, filterQ: 1 });
+  }
+
+  // Descending sting for the moment you're destroyed.
+  function sfxDeath() {
+    playTone({ freq: 300, endFreq: 40, type: 'sawtooth', duration: 0.6, volume: 0.16, attack: 0.005 });
+    playNoise({ duration: 0.5, volume: 0.14, filterType: 'lowpass', filterFreq: 900, filterQ: 0.5, delay: 0.05 });
+  }
+
+  // Quick rising major arpeggio fanfare for clearing a wave.
+  function sfxWaveClear() {
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      playTone({ freq, type: 'square', duration: 0.18, volume: 0.09, attack: 0.005, delay: i * 0.09 });
+    });
+  }
+
   // ---- Background music ----
   // A small procedurally-scheduled loop rather than an audio file, kept in
   // step with README's no-dependencies constraint. Uses the standard
@@ -672,6 +693,7 @@
   // sample-accurate regardless of frame-rate hiccups in the main rAF loop.
   let musicNextNoteTime = 0;
   let musicStep = 0;
+  let musicPaused = false;
   const MUSIC_STEP_DURATION = 0.2;
   const MUSIC_SCHEDULE_AHEAD = 0.25;
   // A minor, retro-arcade feel: a steady 8-step bass under a 16-step lead
@@ -697,8 +719,17 @@
     osc.stop(t0 + duration + 0.02);
   }
 
+  // Called from startNextWave() so the loop always resumes cleanly from its
+  // first step rather than instantly "catching up" through however many
+  // steps it missed while paused on the wave-clear screen.
+  function resumeMusic() {
+    musicPaused = false;
+    musicStep = 0;
+    if (audioCtx) musicNextNoteTime = audioCtx.currentTime + 0.1;
+  }
+
   function scheduleMusic() {
-    if (!audioCtx || audioCtx.state !== 'running') return;
+    if (!audioCtx || audioCtx.state !== 'running' || musicPaused) return;
     while (musicNextNoteTime < audioCtx.currentTime + MUSIC_SCHEDULE_AHEAD) {
       playMusicNote({
         freq: MUSIC_BASS[musicStep % MUSIC_BASS.length],
@@ -916,6 +947,8 @@
     // without this they'd carry over and could hit you the moment the next
     // wave starts, before you've even seen anything spawn.
     enemyBullets.length = 0;
+    sfxWaveClear();
+    musicPaused = true;
     const perfect = !tookDamageThisWave;
     const bonus = Math.round(waveClearBonus(wave) * (perfect ? 1.25 : 1));
     currency += bonus;
@@ -941,6 +974,7 @@
     updateHud();
     upgradeScreen.classList.add('hidden');
     state = STATE.PLAYING;
+    resumeMusic();
   }
 
   function updateBests() {
@@ -953,6 +987,7 @@
 
   function endGame() {
     state = STATE.OVER;
+    sfxDeath();
     const { best, bestWave } = updateBests();
     finalScoreEl.textContent = 'Score: ' + score;
     bestScoreEl.textContent = 'Best: ' + best;
@@ -965,6 +1000,7 @@
   // victory screen instead.
   function showVictory() {
     state = STATE.WON;
+    sfxWaveClear();
     updateBests();
     victoryScoreEl.textContent = 'SCORE: ' + score;
     victoryScreen.classList.remove('hidden');
@@ -1037,6 +1073,7 @@
         if (shields > 0) {
           shields -= 1;
           burst(eb.x, eb.y, '#c9a6ff', 18);
+          sfxShieldHit();
           updateHud();
         } else {
           burst(eb.x, eb.y, '#c9a6ff', 28);
@@ -1122,6 +1159,7 @@
           if (shields > 0) {
             shields -= 1;
             burst(h.x, h.y, '#9fe3ff', 20);
+            sfxShieldHit();
           } else {
             burst(h.x, h.y, '#ff6b6b', 26);
             screenShake = 0.5;

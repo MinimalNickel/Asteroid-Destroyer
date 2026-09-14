@@ -59,8 +59,8 @@ python3 -m http.server 8000
 
 Everything — sound effects and music alike — is synthesized at runtime with the Web Audio API, no audio files or dependencies. The AudioContext is created the moment you tap "Tap to Start" (or tap the mute button first; browsers require a user gesture before audio can play).
 
-- Effects: a quiet laser blip on every shot, a light tick when a bullet hits something without destroying it, an explosion (bigger for bigger hazards) when something's actually destroyed, an icy shimmer when a comet freezes you, a sci-fi warble when an Alien Turret fires its bolt, a gassy hiss when a Plasma Cloud hits you, and a fiery crackle/thud when a meteor hits you.
-- A quiet, looping retro-arcade bassline plays in the background throughout — no audio file, just a small procedurally-scheduled note pattern.
+- Effects: a quiet laser blip on every shot, a light tick when a bullet hits something without destroying it, an explosion (bigger for bigger hazards) when something's actually destroyed, a blip when an asteroid or Alien Turret bolt costs you a shield, a descending sting when you're destroyed, an icy shimmer when a comet freezes you, a sci-fi warble when an Alien Turret fires its bolt, a gassy hiss when a Plasma Cloud hits you, and a fiery crackle/thud when a meteor hits you.
+- A quiet, looping retro-arcade bassline plays in the background during gameplay — no audio file, just a small procedurally-scheduled note pattern. It pauses the instant a wave clears (replaced by a short triumphant fanfare) and picks back up, fresh from the top of the loop, the moment you start the next wave.
 - A **mute button** below the shield pips toggles all of it (effects and music together) on/off; your preference is saved locally and remembered next time.
 
 ## Starfield
