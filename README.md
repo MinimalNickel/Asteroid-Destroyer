@@ -46,6 +46,8 @@ python3 -m http.server 8000
 - **Drag left/right on the screen** works too, as a fallback for desktop testing or if tilt permission isn't granted (iOS Safari requires an explicit permission prompt for motion sensors, requested the moment you tap "Tap to Start").
 - **On the wave-clear screen**: tap an upgrade card to buy and apply it (if you can afford it), or tap "Next Wave" to skip.
 
+Since steering is tilt-based, the game is meant to be played holding the phone in portrait. Rotating to landscape shows a "rotate back to portrait" overlay and genuinely pauses the game underneath it (nothing spawns, moves, or can hit you) until you rotate back, so an accidental turn mid-run can't cost you. On browsers that support it (mainly Android Chrome), it also tries to actually lock the screen orientation itself the moment you start a run -- best-effort only, since most mobile browsers (Safari included) don't support that at all; the overlay is what actually guarantees it everywhere.
+
 ## Gameplay
 
 - No health bar — an unblocked hit ends the run. Shields (up to 3) are your only buffer, some of which can be upgraded to survive a meteor hit instead of being wiped by one.

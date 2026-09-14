@@ -178,6 +178,44 @@ html, body {
   display: none;
 }
 
+#orientationLock {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 24px;
+  background: #05060f;
+  color: #eaf0ff;
+}
+
+#orientationLock svg {
+  color: #7fa8ff;
+  animation: orientationHint 1.8s ease-in-out infinite;
+}
+
+#orientationLock p {
+  font-size: 15px;
+  color: #b8c2e0;
+  max-width: 260px;
+}
+
+@keyframes orientationHint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-90deg); }
+}
+
+/* Only phone-sized landscape viewports -- a resized desktop window is left alone. */
+@media (orientation: landscape) and (max-width: 900px) {
+  #orientationLock {
+    display: flex;
+  }
+}
+
 #victoryScreen h1 {
   color: #ffe27a;
   text-shadow: 0 0 22px rgba(255,226,122,0.7);
