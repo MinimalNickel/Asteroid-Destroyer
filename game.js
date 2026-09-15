@@ -817,6 +817,28 @@
     }
   }
 
+  // Best-effort real orientation lock -- only actually works on browsers
+  // that support the Screen Orientation API (mainly Android Chrome, and
+  // typically only once the page is fullscreen), so this silently does
+  // nothing everywhere else. The CSS overlay below is what actually
+  // guarantees the game can't be played sideways on every device.
+  function requestOrientationLock() {
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('portrait').catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  // Phone-sized landscape viewports only -- a resized desktop window is left
+  // alone. Mirrors the #orientationLock CSS media query exactly; while it
+  // matches, the overlay covers the screen and the game loop below stops
+  // calling update(), so nothing moves, spawns, or can hit you while you
+  // can't see or control anything.
+  const landscapeQuery = window.matchMedia('(orientation: landscape) and (max-width: 900px)');
+  let blockedByOrientation = landscapeQuery.matches;
+  landscapeQuery.addEventListener('change', (e) => { blockedByOrientation = e.matches; });
+
   function handleTilt(e) {
     if (e.gamma === null) return;
     // Calibrate to whatever angle the phone happens to be held at when tilt
@@ -923,6 +945,7 @@
   function startGame() {
     ensureAudio();
     requestTiltPermission();
+    requestOrientationLock();
     resetGame();
     state = STATE.PLAYING;
     startScreen.classList.add('hidden');
@@ -1475,7 +1498,7 @@
     const dt = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
 
-    if (state === STATE.PLAYING) update(dt);
+    if (state === STATE.PLAYING && !blockedByOrientation) update(dt);
     draw();
     scheduleMusic();
 
