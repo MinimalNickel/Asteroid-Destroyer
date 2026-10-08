@@ -1046,6 +1046,9 @@
     bestScoreEl.textContent = 'Best: ' + best;
     bestWaveEl.textContent = 'Best Wave: ' + bestWave;
     gameOverScreen.classList.remove('hidden');
+    // Lets the Play Games bridge (Android only; a no-op everywhere else)
+    // submit this run's final score. Never touches gameplay or scoring.
+    try { window.dispatchEvent(new CustomEvent('asteroiddestroyer:runended', { detail: { score } })); } catch (e) {}
   }
 
   // Wave 99 is the last one, but the player is never told that in advance --
@@ -1057,6 +1060,7 @@
     updateBests();
     victoryScoreEl.textContent = 'SCORE: ' + score;
     victoryScreen.classList.remove('hidden');
+    try { window.dispatchEvent(new CustomEvent('asteroiddestroyer:runended', { detail: { score } })); } catch (e) {}
   }
 
   // ---- Update ----
