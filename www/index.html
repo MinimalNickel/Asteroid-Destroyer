@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#05060f">
+<title>Asteroid Destroyer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="hudLeft">
+      <div id="shieldsWrap">
+        <div class="shield-pip" data-index="0"></div>
+        <div class="shield-pip" data-index="1"></div>
+        <div class="shield-pip" data-index="2"></div>
+      </div>
+      <button id="muteBtn" aria-label="Mute sound">
+        <svg viewBox="0 0 24 24" width="14" height="14">
+          <path class="mute-speaker" d="M3 9v6h4l5 5V4L7 9H3z"></path>
+          <path class="mute-wave" d="M16 8a6 6 0 0 1 0 8"></path>
+          <path class="mute-slash" d="M2 2l20 20"></path>
+        </svg>
+      </button>
+    </div>
+    <div id="currencyLabel">Gold: 0</div>
+    <div id="scoreLabel">Score: 0</div>
+    <div id="waveLabel">Wave 1</div>
+  </div>
+
+  <div id="statusRow">
+    <div id="frozenStatus" class="status-chip status-frozen hidden">FROZEN</div>
+    <div id="weakenedStatus" class="status-chip status-weakened hidden">WEAKENED</div>
+  </div>
+
+  <div id="startScreen" class="overlay">
+    <h1>ASTEROID<br>DESTROYER</h1>
+    <p>Your turret fires on its own, straight up &mdash; tilt your phone left or right to move your ship and dodge (or drag left/right on the screen if tilt isn't available).<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your ship in place for a few seconds. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none) &mdash; unless you've upgraded one to a meteor shield, which absorbs a meteor hit by itself instead. That resistance is lost along with the shield itself, though, so you'll need to restore and re-upgrade it. <b>Plasma Clouds</b> weaken your fire rate and damage for a few seconds. <b>Alien Turrets</b> sweep across the screen shooting bolts at you &mdash; dodge or shoot the bolts down, but the turret itself takes several hits to destroy.<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
+    <button id="startBtn">TAP TO START</button>
+  </div>
+
+  <div id="upgradeScreen" class="overlay hidden">
+    <h1>WAVE CLEAR</h1>
+    <p id="waveBonus">+0 gold (wave clear)</p>
+    <p id="upgradeGold">Gold: 0</p>
+    <div id="upgradeCards">
+      <button class="upgrade-card" data-stat="shield">
+        <span class="upgrade-name" id="shieldName">Shield</span>
+        <span class="upgrade-level" id="shieldLevel">0/3</span>
+        <span class="upgrade-desc" id="shieldDesc">Blocks one hit. A meteor wipes out all your shields at once.</span>
+        <span class="upgrade-cost" id="shieldCost">30</span>
+      </button>
+      <button class="upgrade-card" data-stat="fireRate">
+        <span class="upgrade-name">Rate of Fire</span>
+        <span class="upgrade-level" id="fireRateLevel">0/15</span>
+        <span class="upgrade-desc">Fire faster</span>
+        <span class="upgrade-cost" id="fireRateCost">50</span>
+      </button>
+      <button class="upgrade-card" data-stat="damage">
+        <span class="upgrade-name">Damage</span>
+        <span class="upgrade-level" id="damageLevel">0/15</span>
+        <span class="upgrade-desc">+1 damage per shot</span>
+        <span class="upgrade-cost" id="damageCost">50</span>
+      </button>
+    </div>
+    <p id="upgradeMessage" class="hidden">Not enough gold!</p>
+    <button id="skipUpgradeBtn">NEXT WAVE</button>
+  </div>
+
+  <div id="gameOverScreen" class="overlay hidden">
+    <h1>SHIP DESTROYED</h1>
+    <p id="finalScore">Score: 0</p>
+    <p id="bestScore">Best: 0</p>
+    <p id="bestWave">Best Wave: 1</p>
+    <button id="retryBtn">TRY AGAIN</button>
+  </div>
+
+  <div id="victoryScreen" class="overlay hidden">
+    <h1>CONGRATULATIONS!<br>YOU WON!</h1>
+    <p id="victoryWave">WAVE 99 CLEARED</p>
+    <p id="victoryScore">SCORE: 0</p>
+    <button id="playAgainBtn">PLAY AGAIN</button>
+  </div>
+
+  <div id="orientationLock">
+    <svg viewBox="0 0 24 24" width="48" height="48">
+      <rect x="6" y="2" width="12" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"></rect>
+      <path d="M2 12a10 10 0 0 1 4.5-8.4M22 12a10 10 0 0 1-4.5 8.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      <path d="M6.5 3.6 4 3.2l.6 2.6M17.5 20.4l2.5.4-.6-2.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+    </svg>
+    <p>Rotate your phone back to portrait to keep playing</p>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
