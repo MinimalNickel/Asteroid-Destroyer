@@ -41,6 +41,7 @@
     <h1>ASTEROID<br>DESTROYER</h1>
     <p>Your turret fires on its own, straight up &mdash; tilt your phone left or right to move your ship and dodge (or drag left/right on the screen if tilt isn't available).<br><br>One hit and you're destroyed &mdash; unless a shield absorbs it. Comets just freeze your ship in place for a few seconds. <b>Meteors wipe out all your shields at once</b> (or kill you outright if you have none) &mdash; unless you've upgraded one to a meteor shield, which absorbs a meteor hit by itself instead. That resistance is lost along with the shield itself, though, so you'll need to restore and re-upgrade it. <b>Plasma Clouds</b> weaken your fire rate and damage for a few seconds. <b>Alien Turrets</b> sweep across the screen shooting bolts at you &mdash; dodge or shoot the bolts down, but the turret itself takes several hits to destroy.<br><br>Nothing escapes off-screen &mdash; it loops back around, so you have to destroy everything.<br><br>Clear each wave to spend gold on upgrades.</p>
     <button id="startBtn">TAP TO START</button>
+    <button id="leaderboardBtn" class="secondary-btn hidden">LEADERBOARD</button>
   </div>
 
   <div id="upgradeScreen" class="overlay hidden">
@@ -96,5 +97,6 @@
   </div>
 
   <script src="game.js"></script>
+  <script type="module" src="playgames-bridge.js"></script>
 </body>
 </html>
