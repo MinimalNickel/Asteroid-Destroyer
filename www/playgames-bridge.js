@@ -524,14 +524,14 @@ var init_dist = __esm({
   }
 });
 
-// node_modules/@idleflowgames/capacitor-play-games/dist/esm/web.js
+// node_modules/@modbender/capacitor-play-games/dist/esm/web.js
 var web_exports = {};
 __export(web_exports, {
   PlayGamesWeb: () => PlayGamesWeb
 });
 var PlayGamesWeb;
 var init_web = __esm({
-  "node_modules/@idleflowgames/capacitor-play-games/dist/esm/web.js"() {
+  "node_modules/@modbender/capacitor-play-games/dist/esm/web.js"() {
     init_dist();
     PlayGamesWeb = class extends WebPlugin {
       async initialize() {
@@ -545,30 +545,62 @@ var init_web = __esm({
       async getPlayer() {
         return { playerId: "", displayName: "" };
       }
+      async getPlayerId() {
+        return { playerId: "" };
+      }
+      async loadPlayer() {
+        return { player: null, stale: false };
+      }
+      async loadFriends() {
+        return { friends: [], stale: false, resolutionRequired: false };
+      }
+      async loadRecentlyPlayedWithPlayers() {
+        return { players: [], stale: false };
+      }
+      async showPlayerSearch() {
+        return { player: null };
+      }
+      async showComparePlayer() {
+      }
       async requestServerSideAccess() {
         return { authCode: "" };
       }
-      async fetchIdentityVerificationSignature() {
-        return {
-          publicKeyUrl: "",
-          signature: "",
-          salt: "",
-          timestamp: 0,
-          playerId: "",
-          bundleId: ""
-        };
-      }
       async unlockAchievement() {
       }
+      async revealAchievement() {
+      }
       async incrementAchievement() {
+        return { unlocked: false };
+      }
+      async setAchievementSteps() {
+        return { unlocked: false };
+      }
+      async loadAchievements() {
+        return { achievements: [], stale: false };
       }
       async showAchievements() {
       }
       async submitScore() {
+        return { leaderboardId: "", playerId: "", results: [] };
       }
       async showLeaderboard() {
       }
       async showAllLeaderboards() {
+      }
+      async loadLeaderboards() {
+        return { leaderboards: [], stale: false };
+      }
+      async loadLeaderboard() {
+        return { leaderboard: null, stale: false };
+      }
+      async loadTopScores() {
+        return { leaderboard: null, scores: [], stale: false };
+      }
+      async loadPlayerCenteredScores() {
+        return { leaderboard: null, scores: [], stale: false };
+      }
+      async loadCurrentPlayerScore() {
+        return { score: null, stale: false };
       }
       async loadSnapshot() {
         return { snapshot: null };
@@ -580,6 +612,34 @@ var init_web = __esm({
       }
       async deleteSnapshot() {
       }
+      async showSnapshots() {
+        return { snapshot: null, isNew: false };
+      }
+      async getSnapshotLimits() {
+        return { maxDataSize: 0, maxCoverImageSize: 0 };
+      }
+      async recordGameEvent() {
+      }
+      async recordGameEvents() {
+      }
+      async recordProgressUpdate() {
+      }
+      async requestGameEventsUpload() {
+      }
+      async incrementEvent() {
+      }
+      async loadEvents() {
+        return { events: [], stale: false };
+      }
+      async loadEventsByIds() {
+        return { events: [], stale: false };
+      }
+      async requestRecallAccess() {
+        return { sessionId: "" };
+      }
+      async loadPlayerStats() {
+        return { stats: {}, stale: false };
+      }
     };
   }
 });
@@ -587,7 +647,7 @@ var init_web = __esm({
 // src/playgames-bridge.js
 init_dist();
 
-// node_modules/@idleflowgames/capacitor-play-games/dist/esm/index.js
+// node_modules/@modbender/capacitor-play-games/dist/esm/index.js
 init_dist();
 var PlayGames = registerPlugin("PlayGames", {
   web: () => Promise.resolve().then(() => (init_web(), web_exports)).then((m) => new m.PlayGamesWeb())

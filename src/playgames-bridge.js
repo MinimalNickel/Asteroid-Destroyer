@@ -13,7 +13,7 @@
 // Play Games failure of any kind can never interrupt or crash the game.
 
 import { Capacitor } from '@capacitor/core';
-import { PlayGames } from '@idleflowgames/capacitor-play-games';
+import { PlayGames } from '@modbender/capacitor-play-games';
 
 const LEADERBOARD_ID = 'CgkI5bOK_JodEAIQAQ';
 
