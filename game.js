@@ -868,7 +868,7 @@
   }
 
   function startDrag(clientX) {
-    if (state !== STATE.PLAYING) return;
+    if (state !== STATE.PLAYING || !running) return;
     isDragging = true;
     dragStartClientX = clientX;
     dragStartShipX = ship.x;
@@ -878,7 +878,7 @@
   }
 
   function updateDrag(clientX) {
-    if (state !== STATE.PLAYING || !isDragging || ship.frozenTimer > 0) return;
+    if (state !== STATE.PLAYING || !isDragging || ship.frozenTimer > 0 || !running) return;
     ship.x = clamp(dragStartShipX + (clientX - dragStartClientX), ship.radius, W - ship.radius);
   }
 
@@ -1466,7 +1466,9 @@
     ctx.fillRect(-20, -20, W + 40, H + 40);
     stars.forEach(s => {
       s.tw += 0.02;
-      s.y += s.speed;
+      if (running) {
+        s.y += s.speed;
+      }
       if (s.y - s.r > H) {
         s.y = -s.r;
         s.x = Math.random() * W;
