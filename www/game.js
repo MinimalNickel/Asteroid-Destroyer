@@ -27,6 +27,7 @@
   const victoryScoreEl = document.getElementById('victoryScore');
   const playAgainBtn = document.getElementById('playAgainBtn');
   const muteBtn = document.getElementById('muteBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
 
   const BEST_KEY = 'asteroidDestroyer.best';
   const BEST_WAVE_KEY = 'asteroidDestroyer.bestWave';
@@ -54,7 +55,7 @@
   // ---- Game state ----
   const STATE = { MENU: 'menu', PLAYING: 'playing', UPGRADE: 'upgrade', OVER: 'over', WON: 'won' };
   let state = STATE.MENU;
-
+  let running = true;
   let ship, bullets, hazards, particles, stars, enemyBullets;
   let score = 0, currency = 0, shields = 0, wave = 1;
   let spawnTimer = 0, spawnInterval = 1.6;
@@ -575,6 +576,23 @@
     muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
   }
 
+  function pauseGame() {
+    if (state !== STATE.PLAYING) return;
+    pauseBtn.classList.toggle('paused', !running);
+    pauseBtn.setAttribute('aria-label', running ? 'Pause game' : 'Resume game');
+    running = !running;
+    if (running) {
+      resumeMusic();
+    } else {
+      musicPaused = true;
+    }
+  }
+
+  pauseBtn.addEventListener('click', () => {
+      pauseGame();
+  });
+
+
   muteBtn.addEventListener('click', () => {
     ensureAudio();
     setMuted(!muted);
@@ -948,6 +966,7 @@
     requestOrientationLock();
     resetGame();
     state = STATE.PLAYING;
+    running = true;
     startScreen.classList.add('hidden');
     upgradeScreen.classList.add('hidden');
     gameOverScreen.classList.add('hidden');
@@ -1016,6 +1035,7 @@
   function startNextWave() {
     wave += 1;
     enemiesToSpawn = enemiesForWave(wave);
+    running = true;
     // Ramps down gradually over a long stretch so hazards keep spawning
     // faster well into a long run, but the floor is kept high enough that
     // late-game waves stay theoretically manageable rather than flooding
@@ -1502,7 +1522,7 @@
     const dt = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
 
-    if (state === STATE.PLAYING && !blockedByOrientation) update(dt);
+    if (state === STATE.PLAYING && !blockedByOrientation && running) update(dt);
     draw();
     scheduleMusic();
 
