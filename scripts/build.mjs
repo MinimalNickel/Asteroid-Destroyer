@@ -27,22 +27,11 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const wwwDir = path.join(root, 'www');
 
 async function main() {
-  await build({
-    entryPoints: [path.join(root, 'src/playgames-bridge.js')],
-    outfile: path.join(root, 'playgames-bridge.js'),
-    bundle: true,
-    format: 'esm',
-    target: 'es2019',
-    minify: false,
-    sourcemap: false,
-    logLevel: 'info'
-  });
-
   mkdirSync(wwwDir, { recursive: true });
-  for (const file of ['index.html', 'style.css', 'game.js', 'playgames-bridge.js']) {
+  for (const file of ['index.html', 'style.css', 'game.js']) {
     copyFileSync(path.join(root, file), path.join(wwwDir, file));
   }
-  console.log('Copied index.html, style.css, game.js, playgames-bridge.js -> www/');
+  console.log('Copied index.html, style.css, game.js -> www/');
 }
 
 main().catch((err) => {
