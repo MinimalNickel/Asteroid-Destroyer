@@ -17,8 +17,6 @@
 //      those three files into www/ with the same result, automated.
 //
 // Run with: npm run build
-
-import { build } from 'esbuild';
 import { mkdirSync, copyFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
