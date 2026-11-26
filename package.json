@@ -13,11 +13,9 @@
   "description": "",
   "dependencies": {
     "@capacitor/android": "^8.5.2",
-    "@capacitor/core": "^8.5.2",
-    "@modbender/capacitor-play-games": "^0.5.0"
+    "@capacitor/core": "^8.5.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.2",
-    "esbuild": "^0.28.2"
+    "@capacitor/cli": "^8.5.2"
   }
 }
