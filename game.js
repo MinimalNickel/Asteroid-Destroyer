@@ -1470,7 +1470,9 @@
     ctx.fillRect(-20, -20, W + 40, H + 40);
     stars.forEach(s => {
       s.tw += 0.02;
-      s.y += s.speed;
+      if (running) {
+        s.y += s.speed;
+      }
       if (s.y - s.r > H) {
         s.y = -s.r;
         s.x = Math.random() * W;
