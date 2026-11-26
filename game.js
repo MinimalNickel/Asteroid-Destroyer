@@ -578,9 +578,9 @@
 
   function pauseGame() {
     if (state !== STATE.PLAYING) return;
+    running = !running;
     pauseBtn.classList.toggle('paused', !running);
     pauseBtn.setAttribute('aria-label', running ? 'Pause game' : 'Resume game');
-    running = !running;
     if (running) {
       resumeMusic();
     } else {
