@@ -868,7 +868,7 @@
   }
 
   function startDrag(clientX) {
-    if (state !== STATE.PLAYING) return;
+    if (state !== STATE.PLAYING || !running) return;
     isDragging = true;
     dragStartClientX = clientX;
     dragStartShipX = ship.x;
@@ -878,7 +878,7 @@
   }
 
   function updateDrag(clientX) {
-    if (state !== STATE.PLAYING || !isDragging || ship.frozenTimer > 0) return;
+    if (state !== STATE.PLAYING || !isDragging || ship.frozenTimer > 0 || !running) return;
     ship.x = clamp(dragStartShipX + (clientX - dragStartClientX), ship.radius, W - ship.radius);
   }
 
