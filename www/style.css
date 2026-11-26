@@ -49,7 +49,7 @@ html, body {
   gap: 6px;
 }
 
-#muteBtn {
+#muteBtn, #pauseBtn {
   pointer-events: auto;
   position: relative;
   z-index: 20;
@@ -352,3 +352,8 @@ html, body {
 #skipUpgradeBtn {
   margin-top: 0;
 }
+
+#pauseBtn svg { fill: currentColor; stroke: none; }
+#pauseBtn .play-icon { display: none; }
+#pauseBtn.paused .pause-icon { display: none; }
+#pauseBtn.paused .play-icon { display: block; }

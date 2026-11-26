@@ -577,7 +577,10 @@
   }
 
   function pauseGame() {
+    if (state !== STATE.PLAYING) return;
     running = !running;
+    pauseBtn.classList.toggle('paused', !running);
+    pauseBtn.setAttribute('aria-label', running ? 'Pause game' : 'Resume game');
     if (running) {
       resumeMusic();
     } else {
@@ -1032,6 +1035,7 @@
   function startNextWave() {
     wave += 1;
     enemiesToSpawn = enemiesForWave(wave);
+    running = true;
     // Ramps down gradually over a long stretch so hazards keep spawning
     // faster well into a long run, but the floor is kept high enough that
     // late-game waves stay theoretically manageable rather than flooding
@@ -1518,7 +1522,7 @@
     const dt = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
 
-    if (state === STATE.PLAYING && !blockedByOrientation) update(dt);
+    if (state === STATE.PLAYING && !blockedByOrientation && running) update(dt);
     draw();
     scheduleMusic();
 
