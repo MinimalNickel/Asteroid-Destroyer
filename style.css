@@ -49,6 +49,11 @@ html, body {
   gap: 6px;
 }
 
+#hudButtons {
+  display: flex;
+  gap: 8px;
+}
+
 #muteBtn, #pauseBtn {
   pointer-events: auto;
   position: relative;
