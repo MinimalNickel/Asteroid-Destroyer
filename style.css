@@ -247,6 +247,10 @@ html, body {
   max-width: 320px;
 }
 
+#startScreen p {
+  font-size: 12px;
+}
+
 .overlay > button {
   margin-top: 8px;
   padding: 16px 36px;
